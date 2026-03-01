@@ -48,4 +48,6 @@ if [ ! -f generated/sha3.v ]; then
   exit 1
 fi
 
-echo "Verilog generation complete: generated/sha3.v"
+# ── Promote to release location ───────────────────────────────────────
+cp generated/sha3.v ../sha3.v
+echo "Verilog generation complete: promoted to designs/src/sha3/sha3.v"
