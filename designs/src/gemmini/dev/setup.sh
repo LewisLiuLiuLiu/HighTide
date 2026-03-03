@@ -3,8 +3,8 @@ set -euo pipefail
 
 cd -- "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
-# ── Install/locate JDK 11 ─────────────────────────────────────────────
-JDK_PREFIX="$(pwd)/openjdk-11"
+# ── Install/locate JDK 17 ─────────────────────────────────────────────
+JDK_PREFIX="$(pwd)/openjdk-17"
 
 if [[ -x "${JDK_PREFIX}/bin/java" ]]; then
   echo "Using local JDK at ${JDK_PREFIX}"
@@ -20,9 +20,9 @@ elif command -v java >/dev/null 2>&1; then
 fi
 
 if ! command -v java >/dev/null 2>&1 || { JAVA_VER=$(java -version 2>&1 | head -1 | sed -E 's/.*"([0-9]+).*/\1/'); [ "$JAVA_VER" -lt 11 ] 2>/dev/null; }; then
-  echo "Installing OpenJDK 11 locally..."
-  TB_NAME="openjdk-11.0.2_linux-x64_bin.tar.gz"
-  URL="https://download.java.net/java/GA/jdk11/9/GPL/${TB_NAME}"
+  echo "Installing OpenJDK 17 locally..."
+  TB_NAME="openjdk-17_linux-x64_bin.tar.gz"
+  URL="https://download.java.net/java/GA/jdk17/0d483333a00540d886896bac774ff48b/35/GPL/${TB_NAME}"
   TB="${JDK_PREFIX}/${TB_NAME}"
 
   mkdir -p "${JDK_PREFIX}"
@@ -42,7 +42,7 @@ if ! command -v java >/dev/null 2>&1 || { JAVA_VER=$(java -version 2>&1 | head -
 
   export JAVA_HOME="${JDK_PREFIX}"
   export PATH="${JAVA_HOME}/bin:${PATH}"
-  echo "OpenJDK 11 installed to ${JDK_PREFIX}"
+  echo "OpenJDK 17 installed to ${JDK_PREFIX}"
 fi
 
 # ── Copy pure-Chisel source files from repo ─────────────────────────────
