@@ -10,13 +10,15 @@ Search for interesting open-source hardware designs that would be good additions
 
 ## Selection Criteria
 
-A good candidate design should meet ALL of these:
+A good candidate design must be:
+- **Open-source** — Publicly available on GitHub with a permissive or copyleft license
+- **Synthesizable RTL** — Verilog, SystemVerilog, Chisel, LiteX/Migen, Veriloggen, SpinalHDL, Amaranth, or another HDL convertible to plain Verilog
 
-1. **Open-source license** — Must be publicly available on GitHub (or similar) with a permissive or copyleft license
-2. **Synthesizable RTL** — Must have synthesizable Verilog, SystemVerilog, Chisel, LiteX/Migen, Veriloggen, or another HDL that can be converted to plain Verilog
-3. **Reasonable complexity** — Should be a meaningful design (not trivial), but not so large that it cannot complete the ORFS flow in reasonable time
-4. **Interesting for benchmarking** — Designs that stress different parts of the EDA flow are valuable: high gate count, many macros, complex clock trees, high IO count, deep pipelines, etc.
-5. **Diverse** — Prefer designs that add variety to the suite (different application domains, different design styles, different complexity levels)
+And should meet at least one of these motivations:
+1. **Active development** — The project is actively maintained with recent commits, indicating a living design that the suite should track
+2. **New design language** — Written in an HDL not yet represented in the suite (current languages: Verilog, SystemVerilog, Chisel/Scala, LiteX/Python, Veriloggen/Python). Adding e.g. SpinalHDL, Amaranth, Clash, or other emerging HDLs increases conversion coverage.
+3. **New architecture** — Represents a design style or architecture not already covered (e.g., out-of-order processor, GPU, NoC, systolic array variant, hardware security module, etc.)
+4. **Industry-relevant** — Something commonly seen in real chip designs (e.g., USB controller, PCIe endpoint, DDR controller, standard bus interconnect, crypto engine) that makes the benchmark suite representative of production workloads
 
 ## Design Categories to Consider
 
@@ -98,7 +100,7 @@ ISSUE_EOF
 ## Guidelines
 
 - Aim to propose 3-5 quality candidates per invocation, not a huge list of marginal ones
-- Prefer designs with recent activity (commits within last 2 years) over abandoned repos
 - If a design looks great but has a problematic license, skip it and note why
+- In the issue body, note which selection criteria the design meets (active development, new language, new architecture, industry-relevant)
 - If the user specified a focus area (`$ARGUMENTS`), prioritize that category but still ensure diversity
 - Do NOT open issues for designs that are already in the repo or already have an open issue
