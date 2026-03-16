@@ -22,3 +22,6 @@
 [submodule "designs/src/bp_processor/dev/repo"]
 	path = designs/src/bp_processor/dev/repo
 	url = https://github.com/black-parrot/black-parrot.git
+[submodule "designs/src/sha3/dev/repo"]
+	path = designs/src/sha3/dev/repo
+	url = https://github.com/ucb-bar/sha3
