@@ -65,6 +65,26 @@ bazel build --define update_rtl=true //designs/asap7/lfsr_prbs_gen:lfsr_prbs_gen
 This automatically initializes the git submodule and runs the design's generation script.
 Some designs require additional tools (sv2v, sbt, litex) on PATH.
 
+### Build Results
+
+Outputs are in `bazel-bin/designs/<platform>/<design>/`:
+- `results/` — ODB and GDS files per stage (`1_synth.odb` through `6_final.gds`)
+- `reports/` — QoR reports per stage (timing, area, DRC)
+- `logs/` — Log files and JSON metrics per stage
+
+To view a summary table of all completed builds:
+
+```bash
+./tools/summary.sh
+```
+
+```
+Platform     Design                               Area      Util%        WNS        TNS    Cells   DRCs
+====================================================================================================
+asap7        lfsr_prbs_gen                        47.0       46.4      56.91       0.00      452      0
+asap7        sha3                               3319.8       72.5      88.34       0.00    35255      0
+```
+
 ## Make Flow (legacy)
 
 ### Getting Started
