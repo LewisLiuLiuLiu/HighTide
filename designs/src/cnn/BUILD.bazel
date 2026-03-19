@@ -9,20 +9,29 @@ filegroup(
     ],
 )
 
-# Dev mode: generate CNN RTL via Python/nngen.
 # Requires: git submodule update --init designs/src/cnn/dev/repo
 #           Python + nngen must be available
 genrule(
     name = "rtl_dev_gen",
-    srcs = glob(["dev/**"]),
+    srcs = glob(
+        ["dev/**"],
+        exclude = ["dev/cnn/**"],
+    ),
     outs = [
-        "dev/cnn/cnn.v",
-        "dev/cnn/fakeram_w16_l32768.v",
-        "dev/cnn/fakeram_w16_l512.v",
-        "dev/cnn/fakeram_w16_l8192.v",
-        "dev/cnn/fakeram_w64_l256.v",
+        "cnn_gen.v",
+        "fakeram_w16_l32768_gen.v",
+        "fakeram_w16_l512_gen.v",
+        "fakeram_w16_l8192_gen.v",
+        "fakeram_w64_l256_gen.v",
     ],
-    cmd = "cd $$(dirname $(location dev/generate_cnn_verilog.sh)) && ./generate_cnn_verilog.sh",
+    cmd = """
+        cd $$(dirname $(location dev/generate_cnn_verilog.sh)) && ./generate_cnn_verilog.sh && \
+        cp cnn/cnn.v $(location cnn_gen.v) && \
+        cp cnn/fakeram_w16_l32768.v $(location fakeram_w16_l32768_gen.v) && \
+        cp cnn/fakeram_w16_l512.v $(location fakeram_w16_l512_gen.v) && \
+        cp cnn/fakeram_w16_l8192.v $(location fakeram_w16_l8192_gen.v) && \
+        cp cnn/fakeram_w64_l256.v $(location fakeram_w64_l256_gen.v)
+    """,
     tools = ["dev/generate_cnn_verilog.sh"],
 )
 

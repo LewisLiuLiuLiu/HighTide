@@ -1,19 +1,21 @@
 # sha3 has no pre-generated release RTL.
-# Dev mode generates it via setup.sh (requires sbt on PATH).
-# To create release RTL: run dev flow, then copy dev/generated/sha3.v here.
+# To create release RTL: run update-rtl flow, then copy output here.
 
 filegroup(
     name = "rtl_release",
     srcs = glob(["sha3.v"]),
 )
 
-# Dev mode: generate SHA3 RTL via Chisel/sbt.
 # Requires: git submodule update --init designs/src/sha3/dev/repo
+#           sbt (Scala build tool) must be on PATH
 genrule(
     name = "rtl_dev_gen",
-    srcs = glob(["dev/**"]),
-    outs = ["dev/generated/sha3.v"],
-    cmd = "cd $$(dirname $(location dev/setup.sh)) && bash setup.sh",
+    srcs = glob(
+        ["dev/**"],
+        exclude = ["dev/generated/**"],
+    ),
+    outs = ["sha3_gen.v"],
+    cmd = "cd $$(dirname $(location dev/setup.sh)) && bash setup.sh && cp generated/sha3.v $(OUTS)",
     tools = ["dev/setup.sh"],
 )
 

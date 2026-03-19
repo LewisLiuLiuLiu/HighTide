@@ -3,14 +3,16 @@ filegroup(
     srcs = ["gemmini.v"],
 )
 
-# Dev mode: generate Gemmini RTL via Chisel/sbt.
 # Requires: git submodule update --init designs/src/gemmini/dev/repo
 #           sbt (Scala build tool) must be on PATH
 genrule(
     name = "rtl_dev_gen",
-    srcs = glob(["dev/**"]),
-    outs = ["dev/generated/gemmini.v"],
-    cmd = "cd $$(dirname $(location dev/setup.sh)) && bash setup.sh",
+    srcs = glob(
+        ["dev/**"],
+        exclude = ["dev/generated/**"],
+    ),
+    outs = ["gemmini_gen.v"],
+    cmd = "cd $$(dirname $(location dev/setup.sh)) && bash setup.sh && cp generated/gemmini.v $(OUTS)",
     tools = ["dev/setup.sh"],
 )
 
