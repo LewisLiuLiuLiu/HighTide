@@ -1,0 +1,13 @@
+# Injected BUILD for @liteiclink_src (enjoy-digital/liteiclink).  Imported as
+# top-level `liteiclink`; required by liteeth's USP_GTH_1000BASEX PHY.
+py_library(
+    name = "liteiclink",
+    srcs = glob(["liteiclink/**/*.py"]),
+    data = glob(["liteiclink/**/*"], exclude = ["liteiclink/**/*.py", "**/__pycache__/**"], allow_empty = True),
+    imports = ["."],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@litex_src//:litex",
+        "@pip_litex//pyyaml",
+    ],
+)

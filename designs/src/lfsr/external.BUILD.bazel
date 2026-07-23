@@ -1,0 +1,11 @@
+# Injected as the BUILD for @lfsr_src (alexforencich/verilog-lfsr).
+# Exposes the three RTL files HighTide's lfsr design consumes.
+filegroup(
+    name = "rtl",
+    srcs = [
+        "rtl/lfsr.v",
+        "rtl/lfsr_prbs_check.v",
+        "rtl/lfsr_prbs_gen.v",
+    ],
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,10 @@
+# PyPI leaf dependencies for the LiteX generator toolchain (migen/litex/
+# litedram themselves are fetched as source archives — see MODULE.bazel).
+# Consumed by pip.parse(hub_name = "pip_litex").  pyyaml is pinned to match
+# the version used when the current litedram_core.v was generated; the rest
+# are runtime deps litex declares in its setup.py install_requires.
+pyyaml==6.0.2
+pyserial==3.5
+requests==2.32.3
+packaging==24.2
+colorama==0.4.6

@@ -1,15 +1,9 @@
-[submodule "designs/src/lfsr/dev/repo"]
-	path = designs/src/lfsr/dev/repo
-	url = https://github.com/alexforencich/verilog-lfsr.git
 [submodule "designs/src/minimax/dev/repo"]
 	path = designs/src/minimax/dev/repo
 	url = https://github.com/gsmecher/minimax.git
 [submodule "designs/src/NyuziProcessor/dev/repo"]
 	path = designs/src/NyuziProcessor/dev/repo
 	url = https://github.com/jbush001/NyuziProcessor.git
-[submodule "designs/src/liteeth/dev/liteeth"]
-	path = designs/src/liteeth/dev/repo
-	url = https://github.com/enjoy-digital/liteeth.git
 [submodule "designs/src/cnn/dev/repo"]
 	path = designs/src/cnn/dev/repo
 	url = https://github.com/NNgen/nngen
@@ -50,9 +44,6 @@
 [submodule "designs/src/ternip/dev/basejump_stl"]
 	path = designs/src/ternip/dev/basejump_stl
 	url = https://github.com/bespoke-silicon-group/basejump_stl
-[submodule "designs/src/litedram/dev/repo"]
-	path = designs/src/litedram/dev/repo
-	url = https://github.com/enjoy-digital/litedram.git
 [submodule "designs/src/litepci/dev/repo"]
 	path = designs/src/litepci/dev/repo
 	url = https://github.com/enjoy-digital/litepcie.git

@@ -1,0 +1,32 @@
+#
+# LiteEth standalone-core configuration for HighTide: a UDP endpoint over the
+# Xilinx UltraScale+ GTH-SerDes SGMII PHY (top module liteeth_udp_usp_gth_sgmii).
+#
+# Recovered from upstream enjoy-digital/liteeth examples/udp_usp_gth_sgmii.yml
+# (byte-identical across the pinned liteeth SHAs) and committed here so the
+# generated RTL is reproducible without relying on an uncommitted upstream file.
+#
+# This file is part of LiteEth.
+# Copyright (c) 2020-2023 Florent Kermarrec <florent@enjoy-digital.fr>
+# SPDX-License-Identifier: BSD-2-Clause
+
+# PHY --------------------------------------------------------------------------
+phy       : USP_GTH_1000BASEX
+vendor    : xilinx
+toolchain : vivado
+
+# Core -------------------------------------------------------------------------
+refclk_freq : 156.25e6
+clk_freq    : 25e6
+core        : udp
+data_width  : 32
+dhcp        : True
+
+# UDP Ports --------------------------------------------------------------------
+udp_ports :   {
+  "udp0" : {
+    "data_width"    : 32,
+    "tx_fifo_depth" : 1024,
+    "rx_fifo_depth" : 1024,
+  },
+}

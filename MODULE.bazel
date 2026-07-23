@@ -172,3 +172,83 @@ orfs = use_extension("@bazel-orfs//:extension.bzl", "orfs_repositories")
 orfs.default(
     yosys_share = "//:yosys_share_with_slang",
 )
+
+# --- HighTide design RTL sources (hermetic http_archive, gallery-style) ---
+# Upstream RTL is fetched by Bazel from pinned GitHub archives — no git
+# submodules, no vendored copies.  Each design exposes an :rtl filegroup
+# via its external.BUILD.bazel; source fixes (when needed) are declarative
+# `patches = [...]`.  The design's designs/src/<d>/BUILD.bazel carries a
+# thin `:rtl` alias so consumer labels (//designs/src/<d>:rtl) are stable.
+#
+# Caveat: GitHub /archive/<sha>.tar.gz gzip is not guaranteed byte-stable;
+# if a fetch ever fails on integrity, re-pin the sha256 (same failure mode
+# and fix as the OpenROAD submodule tarballs pinned above).
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+# lfsr — alexforencich/verilog-lfsr (plain Verilog, no generator/patch)
+http_archive(
+    name = "lfsr_src",
+    build_file = "//designs/src/lfsr:external.BUILD.bazel",
+    sha256 = "fbb63239c7b4597bf78d0700bf4d19c2ec81944207b6b79f6b414f5cd0b62266",
+    strip_prefix = "verilog-lfsr-c1f86d036745935f3812ec6ddc7821c70ef4c9de",
+    urls = ["https://github.com/alexforencich/verilog-lfsr/archive/c1f86d036745935f3812ec6ddc7821c70ef4c9de.tar.gz"],
+)
+
+# --- LiteX generator toolchain (shared by litedram/liteeth/litepci) ---
+# migen -> litex -> litedram/liteeth/litepci packages fetched as source
+# archives and exposed as py_library (gallery pymtl3 pattern); their PyPI
+# leaf deps come from the pip_litex hub below.  The generator runs under
+# Bazel (py_binary), so no venv / setup.sh / build-time pip install.
+http_archive(
+    name = "migen_src",
+    build_file = "//designs/src/litedram:migen.BUILD.bazel",
+    sha256 = "2376271b44c05f1b7666b7bfbcd409cdb39995f34aec72f8b6c32ddf828dac79",
+    strip_prefix = "migen-4c2ae8dfeea37f235b52acb8166f12acaaae4f7c",
+    urls = ["https://github.com/m-labs/migen/archive/4c2ae8dfeea37f235b52acb8166f12acaaae4f7c.tar.gz"],
+)
+
+http_archive(
+    name = "litex_src",
+    build_file = "//designs/src/litedram:litex.BUILD.bazel",
+    sha256 = "2ec281a5ab713eb48abdf247e41946cd5d32fa102ac1eed1fe4c129c538ed257",
+    strip_prefix = "litex-a25eeecd27309b2a04a9cf74a1d4849e38ff2090",
+    urls = ["https://github.com/enjoy-digital/litex/archive/a25eeecd27309b2a04a9cf74a1d4849e38ff2090.tar.gz"],
+)
+
+http_archive(
+    name = "litedram_src",
+    build_file = "//designs/src/litedram:litedram.BUILD.bazel",
+    sha256 = "6be2d3cccd32bf98ff136773011e501ffa8bf432e5221148e5509b1145756c28",
+    strip_prefix = "litedram-c7bcb5dc0b8212b1a25de267c0fc0e5ad47029f0",
+    urls = ["https://github.com/enjoy-digital/litedram/archive/c7bcb5dc0b8212b1a25de267c0fc0e5ad47029f0.tar.gz"],
+)
+
+# liteeth pinned at the SHA setup.sh pip-installed (ef5f9ee0), which is the
+# package `import liteeth` actually resolved to during generation — not the
+# dev/repo submodule gitlink (883f3a4b, which only supplied the gen.py entry).
+http_archive(
+    name = "liteeth_src",
+    build_file = "//designs/src/liteeth:liteeth.BUILD.bazel",
+    sha256 = "426140eb5ff67010486e2004ee440ea38d94b43e18af4ef031cf93335e7e53f8",
+    strip_prefix = "liteeth-ef5f9ee0cbf1fb4afe0a23a68367c17e95ffb162",
+    urls = ["https://github.com/enjoy-digital/liteeth/archive/ef5f9ee0cbf1fb4afe0a23a68367c17e95ffb162.tar.gz"],
+)
+
+# liteiclink — required by liteeth's USP_GTH_1000BASEX PHY (GTHChannelPLL).
+http_archive(
+    name = "liteiclink_src",
+    build_file = "//designs/src/liteeth:liteiclink.BUILD.bazel",
+    sha256 = "f1fbc023bd5b7d01eebb1ffe2badb35fd2ba922bc97d1e59ba4d240200df3a9e",
+    strip_prefix = "liteiclink-ef9c29506c9c8e5d733a54403c6a9ec1df5babd5",
+    urls = ["https://github.com/enjoy-digital/liteiclink/archive/ef9c29506c9c8e5d733a54403c6a9ec1df5babd5.tar.gz"],
+)
+
+# PyPI leaf deps for the LiteX generator toolchain (its own hub so other
+# tool-families can pin different versions side-by-side).
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+pip.parse(
+    hub_name = "pip_litex",
+    python_version = "3.13",
+    requirements_lock = "//designs/src/litedram:requirements_lock.txt",
+)
+use_repo(pip, "pip_litex")

@@ -4,6 +4,10 @@ Per-platform notes on tuning, workarounds, and platform-specific quirks for `lfs
 
 This is a small std-cell-only design (~200 cells, no macros) used as a smoke test for the flow on every platform.
 
+## Hermetic RTL sourcing (2026-07, gallery-style)
+
+The three RTL files are no longer a git submodule + checked-in vendored copy. They are fetched by Bazel from a pinned `http_archive` (`@lfsr_src`, `alexforencich/verilog-lfsr` in the root `MODULE.bazel`), exposed as a `filegroup` via `external.BUILD.bazel`. `designs/src/lfsr/BUILD.bazel` is a thin `alias(name = "rtl", actual = "@lfsr_src//:rtl")`, so the consumer label `//designs/src/lfsr:rtl` is unchanged. No `dev/repo` submodule, no `dev/setup.sh`, no `//:update_rtl` select. Upstream RTL is byte-identical to the previously-vendored files.
+
 ## asap7
 
 **Status**: finishing

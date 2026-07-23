@@ -1,0 +1,15 @@
+# Injected BUILD for @liteeth_src (enjoy-digital/liteeth).  Imported as
+# top-level `liteeth`; carries the standalone-core generator liteeth/gen.py.
+# Reuses the shared LiteX toolchain (@migen_src/@litex_src, pip_litex hub).
+py_library(
+    name = "liteeth",
+    srcs = glob(["liteeth/**/*.py"]),
+    data = glob(["liteeth/**/*"], exclude = ["liteeth/**/*.py", "**/__pycache__/**"], allow_empty = True),
+    imports = ["."],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@liteiclink_src//:liteiclink",
+        "@litex_src//:litex",
+        "@pip_litex//pyyaml",
+    ],
+)
