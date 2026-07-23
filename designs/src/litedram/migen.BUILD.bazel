@@ -1,0 +1,10 @@
+# Injected BUILD for @migen_src (m-labs/migen).  Pure-Python HDL library;
+# imported as top-level `migen`.
+py_library(
+    name = "migen",
+    srcs = glob(["migen/**/*.py"]),
+    data = glob(["migen/**/*"], exclude = ["migen/**/*.py", "**/__pycache__/**"], allow_empty = True),
+    imports = ["."],
+    visibility = ["//visibility:public"],
+    deps = ["@pip_litex//colorama"],
+)

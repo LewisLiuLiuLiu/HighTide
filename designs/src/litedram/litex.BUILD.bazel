@@ -1,0 +1,16 @@
+# Injected BUILD for @litex_src (enjoy-digital/litex).  Imported as top-level
+# `litex`.  Non-.py package data (software/sim/build assets) is carried as
+# `data` since litex uses include_package_data.
+py_library(
+    name = "litex",
+    srcs = glob(["litex/**/*.py"]),
+    data = glob(["litex/**/*"], exclude = ["litex/**/*.py", "**/__pycache__/**"], allow_empty = True),
+    imports = ["."],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@migen_src//:migen",
+        "@pip_litex//packaging",
+        "@pip_litex//pyserial",
+        "@pip_litex//requests",
+    ],
+)
