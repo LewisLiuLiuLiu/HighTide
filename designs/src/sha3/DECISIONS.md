@@ -2,6 +2,30 @@
 
 Per-platform notes on tuning, workarounds, and platform-specific quirks for `sha3` (SHA3 hash engine, Verilog).  See `CLAUDE.md` (root) for the canonical upstream-bug index.
 
+## Hermetic RTL generation (2026-07, gallery-style)
+
+`sha3.v` is generated hermetically by Bazel from **Chisel 3.6.1** run under
+`rules_scala`, replacing `dev/setup.sh`'s sbt-from-curl + Haskell-installed JDK.
+The upstream ucb-bar/sha3 Chisel sources (`@sha3_src`) plus the checked-in
+`Sha3Top.scala` / `DpathModule.scala` / emitter are compiled by a `scala_binary`
+(`:sha3_emitter`) and run by the `:gen_sha3` genrule; no `dev/repo` submodule.
+
+- **Toolchain (shared with gemmini)**: `rules_scala` 7.1.5 + `rules_jvm_external`
+  Maven, pinning `chisel3 3.6.1` + `chisel3-plugin 3.6.1` + `firrtl 1.6.0`,
+  Scala **2.13.12**. rules_scala's default 2.13 toolchain is 2.13.17, but
+  chisel3-plugin 3.6.1 is only published for Scala ≤ 2.13.14 and is built
+  against 2.13.12's scalac internals — so the scala compiler/library/reflect
+  artifacts are overridden to 2.13.12 (`scala_deps.overridden_artifact`).
+  A hermetic `remotejdk_17` runs scalac (`.bazelrc`).
+- **Reproducibility**: Chisel embeds absolute compile-time `.scala` paths (incl.
+  the bazel cache hash) in `// @[...]` source-locator comments; the genrule
+  `sed`-normalizes those to a stable `src/main/scala/...` path. Chisel emit is
+  otherwise deterministic.
+- **Equivalence**: asap7 `_final` QoR is **byte-identical to the results.html
+  baseline** (area, cells, slack, Fmax, power). The only source diff vs the old
+  committed `.v` is the `sha3/` subdir in the `@[...]` comment paths (the old
+  flow copied upstream files under `src/main/scala/sha3/`).
+
 Mid-size combinational-heavy core (~20k stdcells, no macros).
 
 ## asap7

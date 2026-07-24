@@ -291,3 +291,77 @@ pip.parse(
     requirements_lock = "//designs/src/litedram:requirements_lock.txt",
 )
 use_repo(pip, "pip_litex")
+
+# --- Scala/Chisel toolchain (for the Chisel-generated designs sha3/gemmini) ---
+# Runs the Chisel emitters under Bazel (scala_binary) instead of sbt-from-curl.
+# Pinned to Chisel 3.6.1 / Scala 2.13.12 to reproduce the exact committed RTL
+# (these designs are chisel3-only — no rocket-chip/chipyard).  Chisel 3.6.1
+# emits Verilog directly via its Scala FIRRTL compiler, so no rules_chisel /
+# CIRCT / firtool is needed (unlike the gallery's Chisel-7 designs).
+bazel_dep(name = "rules_jvm_external", version = "6.7")
+bazel_dep(name = "rules_java", version = "8.14.0")
+bazel_dep(name = "rules_scala", version = "7.1.5")
+
+scala_config = use_extension("@rules_scala//scala/extensions:config.bzl", "scala_config")
+scala_config.settings(scala_version = "2.13.12")
+use_repo(scala_config, "rules_scala_config")
+
+scala_deps = use_extension("@rules_scala//scala/extensions:deps.bzl", "scala_deps")
+# rules_scala 7.1.5's default 2.13 toolchain artifacts are pinned to 2.13.17,
+# but chisel3-plugin 3.6.1 is only published for Scala 2.13.0-2.13.14 and is
+# built against 2.13.12's scalac internals — so the scalac worker itself must
+# run the 2.13.12 compiler.  Override the three scala toolchain artifacts to
+# 2.13.12 (this also bypasses the config-vs-default version-mismatch check).
+scala_deps.overridden_artifact(
+    name = "io_bazel_rules_scala_scala_compiler",
+    artifact = "org.scala-lang:scala-compiler:2.13.12",
+    sha256 = "583adb1ffa7b29fdbfdd6f4c97a396af06a8a91625d059823bba1b7172242d6a",
+)
+scala_deps.overridden_artifact(
+    name = "io_bazel_rules_scala_scala_library",
+    artifact = "org.scala-lang:scala-library:2.13.12",
+    sha256 = "c6a879e4973a60f6162668542a33eaccc2bb565d1c934fb061c5844259131dd1",
+)
+scala_deps.overridden_artifact(
+    name = "io_bazel_rules_scala_scala_reflect",
+    artifact = "org.scala-lang:scala-reflect:2.13.12",
+    sha256 = "c648ceb93a9fcbd22603e0be3d6a156723ae661f516c772a550a088bb3cbca7a",
+)
+scala_deps.scala()
+use_repo(scala_deps, "rules_scala_toolchains")
+
+maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+maven.install(
+    name = "maven_chisel",
+    artifacts = [
+        "edu.berkeley.cs:chisel3_2.13:3.6.1",
+        "edu.berkeley.cs:chisel3-plugin_2.13.12:3.6.1",
+        # chisel3 3.6.x needs firrtl on the classpath (separate artifact in this
+        # era; not pulled transitively by the chisel3 POM).
+        "edu.berkeley.cs:firrtl_2.13:1.6.0",
+    ],
+    repositories = [
+        "https://repo1.maven.org/maven2",
+        "https://s01.oss.sonatype.org/content/repositories/releases",
+    ],
+)
+use_repo(maven, "maven_chisel")
+
+# sha3 — ucb-bar/sha3 (Chisel 3.6.1); a few upstream .scala files compiled
+# with the checked-in top/emitter (see designs/src/sha3).
+http_archive(
+    name = "sha3_src",
+    build_file = "//designs/src/sha3:external.BUILD.bazel",
+    sha256 = "c0b1511c15783ce661ec07e989bc5185cad806d680d16d50adc8ca925ef33f76",
+    strip_prefix = "sha3-8fe970e9f96beef84ee7065d3050cd73c5b106e9",
+    urls = ["https://github.com/ucb-bar/sha3/archive/8fe970e9f96beef84ee7065d3050cd73c5b106e9.tar.gz"],
+)
+
+# gemmini — ucb-bar/gemmini (Chisel 3.6.1); same toolchain as sha3.
+http_archive(
+    name = "gemmini_src",
+    build_file = "//designs/src/gemmini:external.BUILD.bazel",
+    sha256 = "943f721ce57293aec17423849c19f3a512293329767f4d0a92cd5310961443aa",
+    strip_prefix = "gemmini-8c3f9923a44a2fe2c7930587be297d6d4f8c09ca",
+    urls = ["https://github.com/ucb-bar/gemmini/archive/8c3f9923a44a2fe2c7930587be297d6d4f8c09ca.tar.gz"],
+)

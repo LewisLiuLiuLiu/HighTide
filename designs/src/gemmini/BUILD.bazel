@@ -1,34 +1,46 @@
-filegroup(
-    name = "rtl_release",
-    srcs = ["gemmini.v"],
+load("@rules_scala//scala:scala.bzl", "scala_binary")
+
+# gemmini RTL is generated hermetically by Bazel from Chisel 3.6.1: the upstream
+# ucb-bar/gemmini Chisel sources (@gemmini_src) + the checked-in GemminiMeshTop/
+# Arithmetic/emitter are compiled and run under rules_scala (Maven-pinned
+# chisel3 3.6.1, Scala 2.13.12) — no dev/repo submodule, no sbt-from-curl.
+# Consumers keep the stable //designs/src/gemmini:rtl label.
+scala_binary(
+    name = "gemmini_emitter",
+    srcs = [
+        "dev/src/main/scala/gemmini/Arithmetic.scala",
+        "dev/src/main/scala/gemmini/GemminiMeshTop.scala",
+        "@gemmini_src//:core_scala",
+    ],
+    main_class = "gemmini.GemminiMeshEmitter",
+    plugins = ["@maven_chisel//:edu_berkeley_cs_chisel3_plugin_2_13_12"],
+    scalacopts = ["-Xcheckinit"],
+    deps = [
+        "@maven_chisel//:edu_berkeley_cs_chisel3_2_13",
+        "@maven_chisel//:edu_berkeley_cs_firrtl_2_13",
+    ],
 )
 
-# update-rtl mode: init submodule + generate Gemmini RTL via Chisel/sbt.
+# Run the emitter (writes generated/gemmini.v) and normalize Chisel's @[...]
+# source-location comments (they embed the absolute compile-time path incl. the
+# bazel cache hash) down to a stable src/main/scala/... path for reproducibility.
 genrule(
-    name = "rtl_dev_gen",
-    srcs = glob(
-        ["dev/**"],
-        exclude = ["dev/generated/**"],
-    ),
-    outs = ["gemmini_gen.v"],
-    local = True,
+    name = "gen_gemmini",
+    outs = ["gemmini.v"],
     cmd = """
-        bash $(location //:tools/update_rtl.sh) \
-            designs/src/gemmini/dev/repo \
-            $(location dev/setup.sh) && \
-        cp $$(dirname $$(readlink -f $(location dev/setup.sh)))/generated/gemmini.v $(OUTS)
-    """,
-    tools = [
-        "dev/setup.sh",
-        "//:tools/update_rtl.sh",
-    ],
+set -e
+BIN=$$(readlink -f $(execpath :gemmini_emitter))
+GENDIR=$$(pwd)/_gemmini_gen
+mkdir -p "$$GENDIR"
+( cd "$$GENDIR" && "$$BIN" ) >/dev/null
+sed -E 's#@\\[([^]]*/)?(src/main/scala/[^]]*)\\]#@[\\2]#g' "$$GENDIR"/generated/*.v > $@
+rm -rf "$$GENDIR"
+""",
+    tools = [":gemmini_emitter"],
 )
 
 alias(
     name = "rtl",
-    actual = select({
-        "//:update_rtl": ":rtl_dev_gen",
-        "//conditions:default": ":rtl_release",
-    }),
+    actual = ":gen_gemmini",
     visibility = ["//visibility:public"],
 )
