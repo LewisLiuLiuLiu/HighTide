@@ -1,40 +1,39 @@
-filegroup(
-    name = "rtl_release",
+# NyuziProcessor RTL: upstream SystemVerilog (jbush001/NyuziProcessor @
+# ed5c1a50, via @nyuzi_src) lowered to Verilog-2005 by sv2v (pinned v0.0.13,
+# @sv2v).  Fully hermetic — no dev/repo submodule, no dev/setup.sh (which
+# built sv2v from an unpinned Haskell Stack checkout of master).
+#
+# The fakeram-swap patch (applied declaratively on @nyuzi_src) rewrites the
+# generic sram_1r1w / sram_2r1w / cache_lru instantiations to FakeRAM macros;
+# those three source modules are excluded from the sv2v input and provided by
+# the checked-in cache_lru.v (cache_lru_4x64) and macros.v (the fakerams).
+# nyuziTop.sv is the HighTide-authored top wrapper (also checked in).
+
+genrule(
+    name = "gen_nyuzi",
     srcs = [
-        "NyuziProcessor.v",
+        "nyuziTop.sv",
+        "@nyuzi_src//:core_sv",
+        "@nyuzi_src//:core_headers",
+    ],
+    outs = ["NyuziProcessor.v"],
+    cmd = """
+set -e
+INCDIR=$$(dirname $$(echo '$(locations @nyuzi_src//:core_headers)' | tr ' ' '\\n' | grep 'defines[.]svh$$' | head -1))
+$(execpath @sv2v//:sv2v_bin) --top NyuziProcessor -w $@ \
+    -I "$$INCDIR" \
+    $(execpath nyuziTop.sv) \
+    $(locations @nyuzi_src//:core_sv)
+""",
+    tools = ["@sv2v//:sv2v_bin"],
+)
+
+filegroup(
+    name = "rtl",
+    srcs = [
+        ":gen_nyuzi",
         "cache_lru.v",
         "macros.v",
     ],
-)
-
-# update-rtl mode: init submodule + patch + convert SystemVerilog via sv2v.
-genrule(
-    name = "rtl_dev_gen",
-    srcs = [],
-    outs = ["dev_NyuziProcessor.v"],
-    local = True,
-    cmd = """
-        WORKSPACE_ROOT=$$(readlink -f $(location //:tools/update_rtl.sh) | sed 's|/tools/update_rtl.sh||')
-        cd $$WORKSPACE_ROOT
-        git submodule update --init designs/src/NyuziProcessor/dev/repo >&2
-        REPO_SRC_DIR=designs/src/NyuziProcessor/dev/repo/hardware/core
-        patch -p0 -N --silent --directory=$$REPO_SRC_DIR < designs/src/NyuziProcessor/dev/patch-all.patch > /dev/null 2>&1 || true
-        designs/src/NyuziProcessor/dev/sv2v --top NyuziProcessor -w $$OLDPWD/$(OUTS) \
-            -I $$REPO_SRC_DIR/defines.svh \
-            designs/src/NyuziProcessor/dev/nyuziTop.sv \
-            $$(find $$REPO_SRC_DIR -name '*.sv' \
-                ! -name sram_1r1w.sv \
-                ! -name sram_2r1w.sv \
-                ! -name cache_lru.sv)
-    """,
-    tools = ["//:tools/update_rtl.sh"],
-)
-
-alias(
-    name = "rtl",
-    actual = select({
-        "//:update_rtl": ":rtl_dev_gen",
-        "//conditions:default": ":rtl_release",
-    }),
     visibility = ["//visibility:public"],
 )

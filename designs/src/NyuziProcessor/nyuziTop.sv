@@ -1,4 +1,4 @@
-`include "repo/hardware/core/defines.svh"
+`include "defines.svh"
 import defines::*;
 
 module NyuziProcessor #(
