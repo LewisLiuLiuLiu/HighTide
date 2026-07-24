@@ -1,0 +1,14 @@
+# Injected BUILD for @litepci_src (enjoy-digital/litepcie).  Imported as
+# top-level `litepcie`; carries the standalone-core generator litepcie/gen.py.
+# Reuses the shared LiteX toolchain (@litex_src, pip_litex hub).
+py_library(
+    name = "litepcie",
+    srcs = glob(["litepcie/**/*.py"]),
+    data = glob(["litepcie/**/*"], exclude = ["litepcie/**/*.py", "**/__pycache__/**"], allow_empty = True),
+    imports = ["."],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@litex_src//:litex",
+        "@pip_litex//pyyaml",
+    ],
+)

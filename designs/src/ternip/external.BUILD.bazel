@@ -1,0 +1,13 @@
+# Injected BUILD for @ternip_src (sifferman/ternip).  Exposes the core RTL
+# tree; the design selects the _TERNIP_FILES subset.
+exports_files(
+    glob(["rtl/**/*"], allow_empty = True),
+    visibility = ["//visibility:public"],
+)
+
+# Header includes (e.g. ternip_readmem_path.svh) staged for the synth sandbox.
+filegroup(
+    name = "svh",
+    srcs = glob(["rtl/**/*.svh"], allow_empty = True),
+    visibility = ["//visibility:public"],
+)

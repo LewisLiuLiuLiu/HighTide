@@ -1,0 +1,20 @@
+# Injected BUILD for @eyeriss_src (BoooC/CNN-Accelerator-Based-on-Eyeriss-v2).
+# The ASIC-relevant Verilog: all FPGA_design/src/*.v minus the FPGA-only top
+# wrappers / HMI blocks and the duplicate CSC FIFO (matches dev/setup.sh).
+filegroup(
+    name = "src_v",
+    srcs = glob(
+        ["FPGA_design/src/**/*.v"],
+        exclude = [
+            "FPGA_design/src/UART/**",
+            "FPGA_design/src/display/**",
+            "FPGA_design/src/IO_processing/**",
+            "FPGA_design/src/TOP/TOP_integration.v",
+            "FPGA_design/src/TOP/TOP_integration_rom.v",
+            "FPGA_design/src/TOP/TOP_integration_uart.v",
+            "FPGA_design/src/TOP/TOP_interface.v",
+            "FPGA_design/src/CSC_encoder/CSC_encoderr_FIFO.v",
+        ],
+    ),
+    visibility = ["//visibility:public"],
+)

@@ -451,3 +451,47 @@ http_archive(
     strip_prefix = "fpu_div_sqrt_mvp-86e1f558b3c95e91577c41b2fc452c86b04e85ac",
     urls = ["https://github.com/pulp-platform/fpu_div_sqrt_mvp/archive/86e1f558b3c95e91577c41b2fc452c86b04e85ac.tar.gz"],
 )
+
+# --- Copy / SystemVerilog designs (vortex, ternip, eyeriss) ---
+# Upstream RTL fetched and selected/assembled by Bazel; local FakeRAM/stub
+# overlays and fixups stay checked in or are applied as declarative patches.
+http_archive(
+    name = "vortex_src",
+    build_file = "//designs/src/vortex:external.BUILD.bazel",
+    sha256 = "41809835d548ee48b14d8160f75646e5ca507601579f7402251d37acc8e91757",
+    strip_prefix = "vortex-d425a56ef6299971cce5de629d6fe626b98cafa9",
+    urls = ["https://github.com/vortexgpgpu/vortex/archive/d425a56ef6299971cce5de629d6fe626b98cafa9.tar.gz"],
+)
+
+http_archive(
+    name = "ternip_src",
+    build_file = "//designs/src/ternip:external.BUILD.bazel",
+    sha256 = "28ebed24a760fea40c8506bc2f6bb78a57175bbb673ab44bb1b7ce8a062f9be4",
+    strip_prefix = "ternip-187957b57e2a0d4f74374a354e189d158a38ba13",
+    urls = ["https://github.com/sifferman/ternip/archive/187957b57e2a0d4f74374a354e189d158a38ba13.tar.gz"],
+)
+
+http_archive(
+    name = "basejump_stl_src",
+    build_file = "//designs/src/ternip:basejump.BUILD.bazel",
+    sha256 = "92dc773cfa4a7c5e41bfa4fae5af5810c5b78f35b10f0dc8b9489e57b2091492",
+    strip_prefix = "basejump_stl-b48037e28544425839dbd617d45b1a82631bc1a9",
+    urls = ["https://github.com/bespoke-silicon-group/basejump_stl/archive/b48037e28544425839dbd617d45b1a82631bc1a9.tar.gz"],
+)
+
+http_archive(
+    name = "eyeriss_src",
+    build_file = "//designs/src/eyeriss:external.BUILD.bazel",
+    sha256 = "0a32ef13dbc82d7cc33ca070b6b085bfce3e6e65d6c11c288ab39552ea136174",
+    strip_prefix = "CNN-Accelerator-Based-on-Eyeriss-v2-dc1df8bffa3c7a8b091f23fe66155a032496315e",
+    urls = ["https://github.com/BoooC/CNN-Accelerator-Based-on-Eyeriss-v2/archive/dc1df8bffa3c7a8b091f23fe66155a032496315e.tar.gz"],
+)
+
+# litepci — LiteX (reuses the migen/litex/pip_litex toolchain above).
+http_archive(
+    name = "litepci_src",
+    build_file = "//designs/src/litepci:external.BUILD.bazel",
+    sha256 = "bd072e1a470cd1cd1fe07aa5b854108a7f12fc05e14fa347867d9db37b93f065",
+    strip_prefix = "litepcie-95f4731173db01158638b14a7eb4a679df1c2575",
+    urls = ["https://github.com/enjoy-digital/litepcie/archive/95f4731173db01158638b14a7eb4a679df1c2575.tar.gz"],
+)

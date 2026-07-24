@@ -1,0 +1,13 @@
+# Injected BUILD for @basejump_stl_src (bespoke-silicon-group/basejump_stl).
+# ternip needs a small subset; expose the three dirs it draws from.
+exports_files(
+    glob(
+        [
+            "bsg_misc/**",
+            "bsg_dataflow/**",
+            "bsg_mem/**",
+        ],
+        allow_empty = True,
+    ),
+    visibility = ["//visibility:public"],
+)
