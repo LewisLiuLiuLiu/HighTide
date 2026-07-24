@@ -1,0 +1,14 @@
+# Injected BUILD for @sha3_src (ucb-bar/sha3).  Exposes the upstream Chisel
+# source files that HighTide's Sha3Top/emitter compile against.
+filegroup(
+    name = "core_scala",
+    srcs = [
+        "src/main/scala/chi.scala",
+        "src/main/scala/common.scala",
+        "src/main/scala/constants.scala",
+        "src/main/scala/iota.scala",
+        "src/main/scala/rhopi.scala",
+        "src/main/scala/theta.scala",
+    ],
+    visibility = ["//visibility:public"],
+)

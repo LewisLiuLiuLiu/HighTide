@@ -36,5 +36,11 @@ build --@rules_python//python/config_settings:python_version=3.13
 # Show test output
 test --test_output=errors
 
+# Hermetic JDK for the Chisel (rules_scala) designs — sha3/gemmini run their
+# Chisel 3.6.1 emitters under Bazel. Harmless for the C++ OpenROAD/yosys build
+# (no Java actions there).
+build --java_runtime_version=remotejdk_17
+build --tool_java_runtime_version=remotejdk_17
+
 # Per-user overrides (gitignored) — e.g. enabling cache uploads.
 try-import %workspace%/.bazelrc.user

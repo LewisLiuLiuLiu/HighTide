@@ -2,6 +2,22 @@
 
 Per-platform notes on tuning, workarounds, and platform-specific quirks for `gemmini` (Berkeley ML systolic array accelerator, Chisel/Scala).  See `CLAUDE.md` (root) for the canonical upstream-bug index.
 
+## Hermetic RTL generation (2026-07, gallery-style)
+
+`gemmini.v` is generated hermetically by Bazel from **Chisel 3.6.1** run under
+`rules_scala` (the same toolchain as sha3 — see `designs/src/sha3/DECISIONS.md`
+for the Maven/Scala-2.13.12 override details), replacing `dev/setup.sh`'s
+sbt-from-curl. The upstream ucb-bar/gemmini Chisel sources (`@gemmini_src`) plus
+the checked-in `GemminiMeshTop.scala` / `Arithmetic.scala` / emitter are compiled
+by `:gemmini_emitter` and run by the `:gen_gemmini` genrule; no `dev/repo`
+submodule. These designs are chisel3-only (no rocket-chip/chipyard), so a plain
+`scala_binary` suffices — no rules_chisel / CIRCT / firtool.
+
+- **Reproducibility**: same `@[...]` source-path normalization as sha3.
+- **Equivalence**: the generated `gemmini.v` is **byte-identical to the
+  previously-committed RTL modulo the `@[...]` source-locator comments** (the
+  logic is unchanged), so QoR tracks the results.html baseline.
+
 Large macro-heavy ML accelerator with FakeRAM black-boxes for the accumulator and scratchpad SRAMs.
 
 ## Active workarounds (all platforms)

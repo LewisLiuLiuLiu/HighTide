@@ -1,0 +1,13 @@
+# Injected BUILD for @gemmini_src (ucb-bar/gemmini).  Exposes the upstream
+# Chisel source files that HighTide's GemminiMeshTop/emitter compile against.
+filegroup(
+    name = "core_scala",
+    srcs = [
+        "src/main/scala/gemmini/Dataflow.scala",
+        "src/main/scala/gemmini/Mesh.scala",
+        "src/main/scala/gemmini/PE.scala",
+        "src/main/scala/gemmini/Tile.scala",
+        "src/main/scala/gemmini/Util.scala",
+    ],
+    visibility = ["//visibility:public"],
+)
