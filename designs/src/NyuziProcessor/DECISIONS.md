@@ -25,7 +25,15 @@ by **sv2v pinned to the v0.0.13 prebuilt release** (`@sv2v`), replacing the
 - The sv2v v0.0.13 output differs structurally from the previously-committed
   `NyuziProcessor.v` (the old file was made with a different sv2v `master`
   revision — same line count, ~28 % of lines differ in lowering detail) but is
-  functionally equivalent.
+  functionally equivalent: **asap7 synthesis yields 40 908 sequential cells vs
+  the results.html post-route baseline's 40 906** (a 2-cell synth-vs-route
+  delta — the register structure is identical).
+- **Synth-time note**: asap7 yosys synthesis of the v0.0.13 output is slow
+  (~21 min, ~2 GB peak) — 41 % of the time is in `extract_fa` (full-adder
+  extraction) and 32 % in abc. This is a property of how sv2v v0.0.13 lowers
+  the vector-ALU arithmetic (different from the old sv2v-master output); it
+  converges to the same design. If synth wall-time becomes a problem, pin a
+  newer sv2v release or set `SYNTH_MINIMUM_KEEP_SIZE` / disable `extract_fa`.
 
 FakeRAM macros live at `designs/<platform>/NyuziProcessor/sram/{lef,lib}/` and are wrapped by `designs/src/NyuziProcessor/macros.v`.
 
