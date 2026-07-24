@@ -2,6 +2,31 @@
 
 Per-platform notes for `NyuziProcessor` (Jeff Bush) — an open-source GPGPU written in SystemVerilog, with a 4-thread × 16-lane vector ISA. The HighTide port uses 8 vector lanes (halved from upstream 16 to reach a tractable cache-line width) and 2 L2 cache ways (halved from upstream 4) to fit asap7/nangate45/sky130hd floorplans.
 
+## Hermetic RTL sourcing (2026-07, gallery-style)
+
+`NyuziProcessor.v` is generated hermetically by Bazel — upstream SystemVerilog
+(`jbush001/NyuziProcessor @ ed5c1a50`, via `@nyuzi_src`) lowered to Verilog-2005
+by **sv2v pinned to the v0.0.13 prebuilt release** (`@sv2v`), replacing the
+`dev/setup.sh` that built sv2v from an unpinned Haskell Stack checkout of
+`master`. No `dev/repo` submodule.
+
+- **FakeRAM swap is now a declarative patch**: `patches/fakeram-swap.patch`
+  (rewritten from the old `dev/patch-all.patch` to be archive-root-relative) is
+  applied on `@nyuzi_src` and rewrites the generic `sram_1r1w` / `sram_2r1w` /
+  `cache_lru` instantiations to FakeRAM macros. Those three source modules are
+  excluded from the sv2v input (`external.BUILD.bazel` `core_sv` filegroup) and
+  provided instead by the checked-in `cache_lru.v` (`cache_lru_4x64`) and
+  `macros.v` (the fakerams). `nyuziTop.sv` (HighTide top wrapper, moved out of
+  `dev/` to the design root; its include fixed to `defines.svh` resolved via
+  sv2v `-I`) and those two `.v` files stay checked in.
+- **`patch_tool = "patch"`** is set on the `@nyuzi_src` `http_archive`: Bazel's
+  native patcher rejected a couple of hunks (`CONTENT_DOES_NOT_MATCH_TARGET` on
+  `tlb.sv`) that GNU `patch` applies fine with fuzz.
+- The sv2v v0.0.13 output differs structurally from the previously-committed
+  `NyuziProcessor.v` (the old file was made with a different sv2v `master`
+  revision — same line count, ~28 % of lines differ in lowering detail) but is
+  functionally equivalent.
+
 FakeRAM macros live at `designs/<platform>/NyuziProcessor/sram/{lef,lib}/` and are wrapped by `designs/src/NyuziProcessor/macros.v`.
 
 ## asap7

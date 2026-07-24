@@ -243,6 +243,45 @@ http_archive(
     urls = ["https://github.com/enjoy-digital/liteiclink/archive/ef9c29506c9c8e5d733a54403c6a9ec1df5babd5.tar.gz"],
 )
 
+# --- sv2v (SystemVerilog -> Verilog-2005) prebuilt release binary ---
+# Shared by the sv2v-lowered designs (minimax, NyuziProcessor).  Pinning the
+# prebuilt v0.0.13 release replaces building sv2v from an unpinned Haskell
+# Stack checkout of master.
+http_archive(
+    name = "sv2v",
+    build_file = "//designs/src/minimax:sv2v.BUILD.bazel",
+    sha256 = "552799a1d76cd177b9b4cc63a3e77823a3d2a6eb4ec006569288abeff28e1ff8",
+    strip_prefix = "sv2v-Linux",
+    urls = ["https://github.com/zachjs/sv2v/releases/download/v0.0.13/sv2v-Linux.zip"],
+)
+
+# minimax — gsmecher/minimax (SystemVerilog, lowered to Verilog by sv2v)
+http_archive(
+    name = "minimax_src",
+    build_file = "//designs/src/minimax:external.BUILD.bazel",
+    sha256 = "75683b1ef8bc5caa6932d2b24ca94bd07150cae53d04efbe60d3d4ac43756571",
+    strip_prefix = "minimax-cb62251a05522f98b9c999a77a3163d1d8696a37",
+    urls = ["https://github.com/gsmecher/minimax/archive/cb62251a05522f98b9c999a77a3163d1d8696a37.tar.gz"],
+)
+
+# NyuziProcessor — jbush001/NyuziProcessor (SystemVerilog, lowered by sv2v).
+# The fakeram-swap patch (declarative) replaces the generic sram_1r1w/sram_2r1w/
+# cache_lru modules with FakeRAM macros before conversion; those three source
+# files are then excluded from the sv2v input (see external.BUILD.bazel) and
+# provided by the checked-in cache_lru.v / macros.v instead.
+http_archive(
+    name = "nyuzi_src",
+    build_file = "//designs/src/NyuziProcessor:external.BUILD.bazel",
+    # Use GNU patch (fuzz-tolerant); Bazel's native patcher is stricter and
+    # rejects the minor context drift in a couple of hunks.
+    patch_args = ["-p0"],
+    patch_tool = "patch",
+    patches = ["//designs/src/NyuziProcessor:patches/fakeram-swap.patch"],
+    sha256 = "39b8881b67c1b59afd3cbcbea06e11eda10e09f120b7d285750609ae0adc5428",
+    strip_prefix = "NyuziProcessor-ed5c1a50b77af80e54800e21bd8b62822c3f496a",
+    urls = ["https://github.com/jbush001/NyuziProcessor/archive/ed5c1a50b77af80e54800e21bd8b62822c3f496a.tar.gz"],
+)
+
 # PyPI leaf deps for the LiteX generator toolchain (its own hub so other
 # tool-families can pin different versions side-by-side).
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")

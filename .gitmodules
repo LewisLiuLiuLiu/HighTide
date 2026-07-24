@@ -1,9 +1,3 @@
-[submodule "designs/src/minimax/dev/repo"]
-	path = designs/src/minimax/dev/repo
-	url = https://github.com/gsmecher/minimax.git
-[submodule "designs/src/NyuziProcessor/dev/repo"]
-	path = designs/src/NyuziProcessor/dev/repo
-	url = https://github.com/jbush001/NyuziProcessor.git
 [submodule "designs/src/cnn/dev/repo"]
 	path = designs/src/cnn/dev/repo
 	url = https://github.com/NNgen/nngen

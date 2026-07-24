@@ -2,6 +2,20 @@
 
 Per-platform notes on tuning, workarounds, and platform-specific quirks for `minimax` (RV32I core, SystemVerilog → sv2v).  See `CLAUDE.md` (root) for the canonical upstream-bug index.
 
+## Hermetic RTL sourcing (2026-07, gallery-style)
+
+`minimax.v` is generated hermetically by Bazel — upstream SystemVerilog
+(`gsmecher/minimax @ cb62251`, via `@minimax_src`) lowered to Verilog-2005 by
+**sv2v pinned to the v0.0.13 prebuilt release binary** (`@sv2v`), instead of
+building sv2v from an unpinned Haskell Stack checkout of `master` in
+`dev/setup.sh`. The `:gen_minimax` genrule + `:rtl` alias replace the
+submodule + `setup.sh`; consumers keep the stable `//designs/src/minimax:rtl`
+label. sv2v is deterministic, so the output is byte-reproducible. The only
+diff vs the previously-committed `minimax.v` is sv2v's internal stream-lowering
+temp names (`_sv2v_strm_<hash>`), which differ across sv2v versions but do not
+affect synthesis: **asap7 `_final` QoR is byte-identical to the results.html
+baseline** (area, cells, slack, Fmax, power).
+
 A small RISC-V core (~10–20k stdcells, no macros).  Used as a real-RTL smoke test on every platform.
 
 ## asap7

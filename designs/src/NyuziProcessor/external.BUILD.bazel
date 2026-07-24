@@ -1,0 +1,23 @@
+# Injected BUILD for @nyuzi_src (jbush001/NyuziProcessor), already patched by
+# the fakeram-swap patch (see MODULE.bazel).  Exposes the core SystemVerilog
+# that sv2v lowers, excluding the three modules replaced by FakeRAM macros /
+# the checked-in cache_lru.v (sram_1r1w, sram_2r1w, cache_lru).
+filegroup(
+    name = "core_sv",
+    srcs = glob(
+        ["hardware/core/*.sv"],
+        exclude = [
+            "hardware/core/sram_1r1w.sv",
+            "hardware/core/sram_2r1w.sv",
+            "hardware/core/cache_lru.sv",
+        ],
+    ),
+    visibility = ["//visibility:public"],
+)
+
+# defines.svh (+ any other headers) — the sv2v include directory.
+filegroup(
+    name = "core_headers",
+    srcs = glob(["hardware/core/*.svh"]),
+    visibility = ["//visibility:public"],
+)

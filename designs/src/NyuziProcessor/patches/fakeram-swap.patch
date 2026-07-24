@@ -1,5 +1,5 @@
---- dcache_data_stage.sv	2025-07-09 22:42:54.320385140 +0000
-+++ dcache_data_stage_fix.sv	2025-07-09 22:42:52.093373519 +0000
+--- hardware/core/dcache_data_stage.sv	2025-07-09 22:42:54.320385140 +0000
++++ hardware/core/dcache_data_stage_fix.sv	2025-07-09 22:42:52.093373519 +0000
 @@ -472,7 +472,7 @@
          .one_hot(way_hit_oh),
          .index(way_hit_idx));
@@ -9,8 +9,8 @@
          .DATA_WIDTH(CACHE_LINE_BITS),
          .SIZE(`L1D_WAYS * `L1D_SETS),
          .READ_DURING_WRITE("NEW_DATA")
---- dcache_tag_stage.sv 2025-11-05 03:31:47.869306193 +0000
-+++ dcache_tag_stage_fix.sv     2025-11-05 03:30:09.028400827 +0000
+--- hardware/core/dcache_tag_stage.sv 2025-11-05 03:31:47.869306193 +0000
++++ hardware/core/dcache_tag_stage_fix.sv     2025-11-05 03:30:09.028400827 +0000
 @@ -177,7 +177,7 @@
              // to all be cleared on reset.
              logic line_valid[`L1D_SETS];
@@ -29,8 +29,8 @@
          .NUM_WAYS(`L1D_WAYS),
          .NUM_SETS(`L1D_SETS)
      ) lru(
---- ifetch_data_stage.sv	2025-07-09 22:14:25.832128443 +0000
-+++ ifetch_data_stage_fix.sv	2025-07-09 22:16:31.971567357 +0000
+--- hardware/core/ifetch_data_stage.sv	2025-07-09 22:14:25.832128443 +0000
++++ hardware/core/ifetch_data_stage_fix.sv	2025-07-09 22:16:31.971567357 +0000
 @@ -152,7 +152,7 @@
      //
      // Cache data
@@ -40,8 +40,8 @@
          .DATA_WIDTH(CACHE_LINE_BITS),
          .SIZE(`L1I_WAYS * `L1I_SETS),
          .READ_DURING_WRITE("NEW_DATA")
---- ifetch_tag_stage.sv 2025-11-05 03:31:48.227305861 +0000
-+++ ifetch_tag_stage_fix.sv     2025-11-05 03:30:23.370386719 +0000
+--- hardware/core/ifetch_tag_stage.sv 2025-11-05 03:31:48.227305861 +0000
++++ hardware/core/ifetch_tag_stage_fix.sv     2025-11-05 03:30:23.370386719 +0000
 @@ -179,7 +179,7 @@
              // to simultaneously be cleared on reset.
              logic line_valid[`L1I_SETS];
@@ -60,8 +60,8 @@
          .NUM_WAYS(`L1I_WAYS),
          .NUM_SETS(`L1I_SETS)
      ) cache_lru(
---- int_execute_stage.sv	2025-07-09 01:05:59.672070430 +0000
-+++ int_execute_stage_fix.sv	2025-07-09 19:58:46.419523214 +0000
+--- hardware/core/int_execute_stage.sv	2025-07-09 01:05:59.672070430 +0000
++++ hardware/core/int_execute_stage_fix.sv	2025-07-09 19:58:46.419523214 +0000
 @@ -101,87 +101,40 @@
              assign zero = difference == 0;
              assign signed_gtr = overflow == negative;
@@ -183,8 +183,8 @@
  
              // Right shift
              assign shift_in_sign = of_instruction.alu_op == OP_ASHR ? lane_operand1[31] : 1'd0;
---- l2_cache_read_stage.sv	2025-07-09 22:52:04.261145832 +0000
-+++ l2_cache_read_stage_fix.sv	2025-07-09 22:51:12.391892153 +0000
+--- hardware/core/l2_cache_read_stage.sv	2025-07-09 22:52:04.261145832 +0000
++++ hardware/core/l2_cache_read_stage_fix.sv	2025-07-09 22:51:12.391892153 +0000
 @@ -143,7 +143,7 @@
      //
      // Cache memory
@@ -194,8 +194,8 @@
          .DATA_WIDTH(CACHE_LINE_BITS),
          .SIZE(`L2_WAYS * `L2_SETS),
          .READ_DURING_WRITE("NEW_DATA")
---- l2_cache_tag_stage.sv       2025-11-05 03:31:47.438306593 +0000
-+++ l2_cache_tag_stage_fix.sv   2025-11-05 03:29:52.497417260 +0000
+--- hardware/core/l2_cache_tag_stage.sv       2025-11-05 03:31:47.438306593 +0000
++++ hardware/core/l2_cache_tag_stage_fix.sv   2025-11-05 03:29:52.497417260 +0000
 @@ -62,7 +62,7 @@
          assert((`L2_SETS & (`L2_SETS - 1)) == 0);
      end
@@ -223,8 +223,8 @@
                  .DATA_WIDTH(1),
                  .SIZE(`L2_SETS),
                  .READ_DURING_WRITE("NEW_DATA")
---- operand_fetch_stage.sv	2025-07-09 22:45:53.872307594 +0000
-+++ operand_fetch_stage_fix.sv	2025-07-09 22:54:32.955868282 +0000
+--- hardware/core/operand_fetch_stage.sv	2025-07-09 22:45:53.872307594 +0000
++++ hardware/core/operand_fetch_stage_fix.sv	2025-07-09 22:54:32.955868282 +0000
 @@ -58,7 +58,7 @@
      vector_t vector_val1;
      vector_t vector_val2;
@@ -243,8 +243,8 @@
                  .DATA_WIDTH($bits(scalar_t)),
                  .SIZE(32 * `THREADS_PER_CORE),
                  .READ_DURING_WRITE("DONT_CARE")
---- rr_arbiter.sv	2025-07-09 01:05:59.698070566 +0000
-+++ rr_arbiter_fixed.sv	2025-07-09 20:02:02.221433548 +0000
+--- hardware/core/rr_arbiter.sv	2025-07-09 01:05:59.698070566 +0000
++++ hardware/core/rr_arbiter_fixed.sv	2025-07-09 20:02:02.221433548 +0000
 @@ -48,8 +48,8 @@
                  logic granted;
  
@@ -256,8 +256,8 @@
                  begin
                      granted &= !request[bit_idx];
                  end
---- sync_fifo.sv	2025-07-09 22:58:56.848137411 +0000
-+++ sync_fifo_fix.sv	2025-07-09 22:58:48.638098119 +0000
+--- hardware/core/sync_fifo.sv	2025-07-09 22:58:56.848137411 +0000
++++ hardware/core/sync_fifo_fix.sv	2025-07-09 22:58:48.638098119 +0000
 @@ -134,10 +134,5 @@
          end
      end
@@ -269,8 +269,8 @@
 -    end
  `endif
  endmodule
---- tlb.sv	2025-07-09 22:48:59.312236398 +0000
-+++ tlb_fix.sv	2025-07-09 22:48:52.022200246 +0000
+--- hardware/core/tlb.sv	2025-07-09 22:48:59.312236398 +0000
++++ hardware/core/tlb_fix.sv	2025-07-09 22:48:52.022200246 +0000
 @@ -93,7 +93,7 @@
              logic[ASID_WIDTH - 1:0] way_asid;
              logic way_global;

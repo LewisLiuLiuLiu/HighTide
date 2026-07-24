@@ -1,0 +1,7 @@
+# Injected BUILD for @sv2v (zachjs/sv2v v0.0.13 prebuilt Linux binary).
+# SystemVerilog -> Verilog-2005 lowering tool, shared by the sv2v designs.
+filegroup(
+    name = "sv2v_bin",
+    srcs = ["sv2v"],
+    visibility = ["//visibility:public"],
+)
