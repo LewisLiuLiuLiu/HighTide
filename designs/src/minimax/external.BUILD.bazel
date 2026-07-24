@@ -1,0 +1,7 @@
+# Injected BUILD for @minimax_src (gsmecher/minimax).  Exposes the upstream
+# SystemVerilog source that sv2v lowers to Verilog.
+filegroup(
+    name = "minimax_sv",
+    srcs = ["rtl/minimax.v"],
+    visibility = ["//visibility:public"],
+)

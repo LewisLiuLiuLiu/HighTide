@@ -1,28 +1,18 @@
-filegroup(
-    name = "rtl_release",
-    srcs = ["minimax.v"],
-)
-
-# update-rtl mode: init submodule + convert SystemVerilog via sv2v.
+# minimax RTL: upstream SystemVerilog (gsmecher/minimax @ cb62251, via
+# @minimax_src) lowered to Verilog-2005 by sv2v (pinned v0.0.13, @sv2v).
+# Fully hermetic — no dev/repo submodule, no dev/setup.sh (which built sv2v
+# from an unpinned Haskell Stack checkout).  Consumers keep the stable
+# //designs/src/minimax:rtl label.
 genrule(
-    name = "rtl_dev_gen",
-    srcs = [],
-    outs = ["minimax_gen.v"],
-    local = True,
-    cmd = """
-        WORKSPACE_ROOT=$$(readlink -f $(location //:tools/update_rtl.sh) | sed 's|/tools/update_rtl.sh||')
-        cd $$WORKSPACE_ROOT
-        git submodule update --init designs/src/minimax/dev/repo >&2
-        designs/src/minimax/dev/sv2v -w $$OLDPWD/$(OUTS) designs/src/minimax/dev/repo/rtl/minimax.v
-    """,
-    tools = ["//:tools/update_rtl.sh"],
+    name = "gen_minimax",
+    srcs = ["@minimax_src//:minimax_sv"],
+    outs = ["minimax.v"],
+    cmd = "$(execpath @sv2v//:sv2v_bin) -w $@ $(execpath @minimax_src//:minimax_sv)",
+    tools = ["@sv2v//:sv2v_bin"],
 )
 
 alias(
     name = "rtl",
-    actual = select({
-        "//:update_rtl": ":rtl_dev_gen",
-        "//conditions:default": ":rtl_release",
-    }),
+    actual = ":gen_minimax",
     visibility = ["//visibility:public"],
 )
