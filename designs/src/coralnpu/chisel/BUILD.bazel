@@ -1,0 +1,49 @@
+# coralnpu Chisel 7 -> SystemVerilog generation (ported from the bazel-orfs
+# gallery coralnpu, RTL-generation steps only — the gallery's demo_flow /
+# orfs_synth / image rules are dropped; HighTide drives P&R via hightide_design
+# on //designs/asap7|nangate45|sky130hd/coralnpu).
+#
+# Chisel 7 runs on Scala 2.13.17 (the cross-build version); the rest of the
+# suite's Chisel designs (sha3/gemmini) stay on 2.13.12.
+load("@bazel-orfs-verilog//:generate.bzl", "fir_library")
+load("@bazel-orfs-verilog//:verilog.bzl", "verilog_directory")
+load("@rules_chisel//chisel:defs.bzl", "chisel_binary")
+
+# Step 1: compile the Chisel generator binary.
+chisel_binary(
+    name = "generator",
+    srcs = ["src/CoreMiniAxiGenerator.scala"],
+    main_class = "coralnpu.generator.CoreMiniAxiGenerator",
+    scala_version = "2.13.17",
+    deps = ["@coralnpu//:coralnpu_lib"],
+)
+
+# Step 2: elaborate Chisel -> FIRRTL (drop verification layers for synthesis).
+fir_library(
+    name = "coralnpu_fir",
+    generator = ":generator",
+    opts = ["--disable-layers=Verification"],
+)
+
+# Step 3: firtool FIRRTL -> split SystemVerilog directory.
+verilog_directory(
+    name = "coralnpu_sv",
+    srcs = [":coralnpu_fir"],
+    opts = [
+        "--disable-all-randomization",
+        "--disable-layers=Verification",
+        "--lowering-options=disallowPackedArrays,disallowLocalVariables,noAlwaysComb",
+    ],
+)
+
+# Step 4: generated SV + the external FPnew/common_cells RTL (BlackBox impls).
+filegroup(
+    name = "coralnpu_all_sv",
+    srcs = [
+        ":coralnpu_sv",
+        "@common_cells//:all_srcs",
+        "@cvfpu//:all_srcs",
+        "@fpu_div_sqrt_mvp//:all_srcs",
+    ],
+    visibility = ["//visibility:public"],
+)

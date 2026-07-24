@@ -8,9 +8,6 @@
 	path = designs/src/NVDLA/dev/repo
 	url = https://github.com/nvdla/hw.git
 	branch = nv_small
-[submodule "designs/src/coralnpu/dev/repo"]
-	path = designs/src/coralnpu/dev/repo
-	url = https://github.com/google-coral/coralnpu.git
 [submodule "designs/src/vortex/dev/repo"]
 	path = designs/src/vortex/dev/repo
 	url = https://github.com/vortexgpgpu/vortex.git

@@ -21,6 +21,9 @@ hightide_design(
         "ADDITIONAL_LIBS": [":sram_libs"],
     },
     arguments = {
+        # coralnpu is now Chisel-7 SystemVerilog (via firtool) → yosys-slang.
+        "SYNTH_HDL_FRONTEND": "slang",
+        "SYNTH_SLANG_ARGS": "--disable-instance-caching=false -DUSE_GENERIC -Iexternal/+_repo_rules+common_cells/include",
         "SYNTH_HIERARCHICAL": "1",
         "CORE_UTILIZATION": "40",
         "PLACE_DENSITY_LB_ADDON": "0.20",
