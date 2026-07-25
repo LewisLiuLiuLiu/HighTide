@@ -1,57 +1,67 @@
+# RTL for the NNgen CNN accelerator benchmark.
+#
+# cnn.v is generated hermetically by Bazel from the upstream NNgen model
+# builder: @nngen_src (examples/cnn/cnn.py) runs under the :cnn_gen py_binary
+# with veriloggen/onnx/numpy from the pip_nngen hub — no git submodule, no
+# dev/setup.sh venv.  NNgen infers register-array memories; :replace_rams then
+# rewrites each `ram_w<W>_l<L>_*` module into a wrapper instantiating the
+# matching bsg_fakeram macro (byte-identical to the retired shell flow).
+#
+# The behavioural fakeram_w*_l*.v stubs (HighTide/bsg_fakeram, not upstream
+# NNgen) stay committed so yosys elaboration resolves the macro modules; the
+# per-platform FakeRAM LEF/LIB live under designs/<platform>/cnn/sram/.
+
+load("@rules_python//python:defs.bzl", "py_binary")
+
+# Hermetic NNgen CNN generator (nngen fetched as a source archive; veriloggen/
+# onnx/numpy from pip_nngen — see root MODULE.bazel).  Replaces the venv.
+py_binary(
+    name = "cnn_gen",
+    srcs = ["cnn_gen_main.py"],
+    main = "cnn_gen_main.py",
+    visibility = ["//visibility:private"],
+    deps = ["@nngen_src//:nngen"],
+)
+
+# Inferred-RAM -> fakeram-wrapper rewriter (stdlib only, no deps).
+py_binary(
+    name = "replace_rams",
+    srcs = ["replace_rams.py"],
+    main = "replace_rams.py",
+    visibility = ["//visibility:private"],
+)
+
+# Generate cnn.v: NNgen's to_ipxact emits cnn_v*/hdl/cnn.v (simulation off),
+# then rewrite inferred RAM modules into fakeram wrappers.  PYTHONHASHSEED=0
+# pins veriloggen's dict-ordered emission so the output is byte-reproducible.
+genrule(
+    name = "gen_cnn",
+    outs = ["cnn.v"],
+    cmd = """
+set -e
+GEN=$$(readlink -f $(execpath :cnn_gen))
+RR=$$(readlink -f $(execpath :replace_rams))
+GENDIR=$$(pwd)/_cnn_gen
+mkdir -p "$$GENDIR"
+( cd "$$GENDIR" && PYTHONHASHSEED=0 HOME="$$GENDIR" "$$GEN" "$$GENDIR/cnn.v" ) >/dev/null
+PYTHONHASHSEED=0 "$$RR" "$$GENDIR/cnn.v"
+cp "$$GENDIR/cnn.v" $@
+rm -rf "$$GENDIR"
+""",
+    tools = [
+        ":cnn_gen",
+        ":replace_rams",
+    ],
+)
+
 filegroup(
-    name = "rtl_release",
+    name = "rtl",
     srcs = [
-        "cnn.v",
+        ":gen_cnn",
         "fakeram_w16_l32768.v",
         "fakeram_w16_l512.v",
         "fakeram_w16_l8192.v",
         "fakeram_w64_l256.v",
     ],
-)
-
-# update-rtl mode: init submodule + generate CNN RTL via Python/nngen.
-genrule(
-    name = "rtl_dev_gen",
-    srcs = glob(
-        ["dev/**"],
-        exclude = ["dev/cnn/**"],
-    ),
-    outs = [
-        "cnn_gen.v",
-        "fakeram_w16_l32768_gen.v",
-        "fakeram_w16_l512_gen.v",
-        "fakeram_w16_l8192_gen.v",
-        "fakeram_w64_l256_gen.v",
-    ],
-    local = True,
-    cmd = """
-        bash $(location //:tools/update_rtl.sh) \
-            designs/src/cnn/dev/repo \
-            $(location dev/generate_cnn_verilog.sh) && \
-        DEV_DIR=$$(dirname $$(readlink -f $(location dev/generate_cnn_verilog.sh))) && \
-        cp $$DEV_DIR/cnn/cnn.v $(location cnn_gen.v) && \
-        cp $$DEV_DIR/cnn/fakeram_w16_l32768.v $(location fakeram_w16_l32768_gen.v) && \
-        cp $$DEV_DIR/cnn/fakeram_w16_l512.v $(location fakeram_w16_l512_gen.v) && \
-        cp $$DEV_DIR/cnn/fakeram_w16_l8192.v $(location fakeram_w16_l8192_gen.v) && \
-        cp $$DEV_DIR/cnn/fakeram_w64_l256.v $(location fakeram_w64_l256_gen.v)
-    """,
-    tools = [
-        "dev/generate_cnn_verilog.sh",
-        "//:tools/update_rtl.sh",
-    ],
-)
-
-alias(
-    name = "rtl",
-    actual = select({
-        "//:update_rtl": ":rtl_dev_gen",
-        "//conditions:default": ":rtl_release",
-    }),
     visibility = ["//visibility:public"],
 )
-
-# Note: FakeRAM LEF/LIB files now live in
-# designs/<platform>/cnn/sram/{lef,lib}/ (bsg_fakeram outputs, per
-# designs/src/cnn/dev/generated/fakeram_<platform>.cfg). The behavioural
-# fakeram_w*_l*.v files above are kept in the RTL filegroup so simulation
-# and yosys elaboration still resolve.

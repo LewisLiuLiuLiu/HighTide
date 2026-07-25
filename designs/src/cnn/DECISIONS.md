@@ -6,7 +6,17 @@ Per-platform notes for the cnn benchmark — a NNgen-generated CNN inference acc
 |---|---|
 | `cnn` | Single-design with 65 SRAM instances across 4 distinct sizes (16×512, 16×8192, 16×32768, 64×256). |
 
-FakeRAM macros live at `designs/<platform>/cnn/sram/{lef,lib}/`. The behavioural Verilog stubs `fakeram_w*_l*.v` ship with the NNgen sources and stay in the `:rtl` filegroup so yosys can elaborate against them.
+FakeRAM macros live at `designs/<platform>/cnn/sram/{lef,lib}/`. The behavioural Verilog stubs `fakeram_w*_l*.v` (bsg_fakeram, HighTide-authored) stay committed in the `:rtl` filegroup so yosys can elaborate against them.
+
+## Hermetic RTL sourcing (2026-07)
+
+`cnn.v` is generated hermetically by Bazel — no `dev/repo` submodule, no `dev/setup.sh` venv:
+
+- **`@nngen_src`** (`http_archive`, pinned `d5ac0cc9`) supplies the NNgen toolchain + `examples/cnn/cnn.py`; the PyPI leaf deps (`veriloggen`/`onnx`/`numpy`/…) come from the **`pip_nngen`** hub (`requirements_lock.txt`, the exact pins from the retired `dev/requirements.txt`).
+- **`:cnn_gen`** (py_binary) runs the model builder with simulation off (`ng.to_ipxact` emits `cnn_v*/hdl/cnn.v`); **`:replace_rams`** (stdlib py_binary) rewrites each inferred `ram_w<W>_l<L>_*` register-array module into a wrapper instantiating the matching `fakeram_w<W>_l<L>` macro — byte-identical logic to the retired `replace_rams_with_fakerams.sh`.
+- **Reproducibility fix**: the example assigns `np.random` int8 weights, and NNgen bakes a handful of per-layer requantization shift amounts (`cparam_*_cshamt`) into the RTL, so the *unseeded* upstream flow produced a non-reproducible `cnn.v` (4 shift constants drifted per run). `:cnn_gen` now seeds `random`/`numpy` (+ `PYTHONHASHSEED=0`), making the generated RTL byte-deterministic across builds. The shift constants feed 5-bit constant assigns that synthesis folds identically, so PPA is unaffected by the seed choice.
+
+Retained under `dev/`: the per-platform `generated/fakeram_*.cfg` + `gen_macro_grid_sky130hd.py` (SRAM-regeneration inputs for `tools/regenerate_sram.sh`). Removed: `dev/repo`, `dev/setup.sh`, `dev/requirements.txt`, `dev/generate_cnn_verilog.sh`, `dev/replace_rams_with_fakerams.sh`, `dev/fakeram_asap7/` (stale intermediate — the behavioural `.v` are committed at top level, the LEF/LIB under `designs/<platform>/cnn/sram/`).
 
 ## FakeRAM regeneration (2026-05-13)
 
