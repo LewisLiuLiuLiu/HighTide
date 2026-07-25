@@ -303,7 +303,13 @@ bazel_dep(name = "rules_java", version = "8.14.0")
 bazel_dep(name = "rules_scala", version = "7.1.5")
 
 scala_config = use_extension("@rules_scala//scala/extensions:config.bzl", "scala_config")
-scala_config.settings(scala_version = "2.13.12")
+# Default 2.13.12 for sha3/gemmini (Chisel 3.6.1); 2.13.17 as a cross-build
+# version for coralnpu (Chisel 7 — see the Chisel-7 toolchain block below).
+# Per-target selection via the scala_version attribute of scala_*/chisel_* rules.
+scala_config.settings(
+    scala_version = "2.13.12",
+    scala_versions = ["2.13.17"],
+)
 use_repo(scala_config, "rules_scala_config")
 
 scala_deps = use_extension("@rules_scala//scala/extensions:deps.bzl", "scala_deps")
@@ -364,4 +370,84 @@ http_archive(
     sha256 = "943f721ce57293aec17423849c19f3a512293329767f4d0a92cd5310961443aa",
     strip_prefix = "gemmini-8c3f9923a44a2fe2c7930587be297d6d4f8c09ca",
     urls = ["https://github.com/ucb-bar/gemmini/archive/8c3f9923a44a2fe2c7930587be297d6d4f8c09ca.tar.gz"],
+)
+
+# --- Chisel 7 toolchain (for coralnpu — CIRCT/firtool, Scala 2.13.17) ---
+# Ported from the bazel-orfs gallery's coralnpu.  chisel_binary/chisel_library
+# (rules_chisel) elaborate the Chisel 7 sources to FIRRTL; fir_library +
+# verilog_directory (bazel-orfs-verilog) run firtool to SystemVerilog.  Runs
+# on Scala 2.13.17 (the cross-version above), coexisting with the 2.13.12
+# Chisel-3.6.1 designs.
+bazel_dep(name = "rules_chisel", version = "0.3.1")
+
+chisel = use_extension("@rules_chisel//chisel:extensions.bzl", "chisel")
+chisel.toolchain()
+use_repo(chisel, "chisel_maven")
+
+# coralnpu (google-coral) + its Chisel-7 dep tree, at the gallery's pinned SHAs.
+http_archive(
+    name = "coralnpu",
+    build_file = "//designs/src/coralnpu/chisel:external.BUILD.bazel",
+    patch_args = ["-p1"],
+    patch_cmds = [
+        "find . -name BUILD -empty -delete",
+        "find . -name BUILD.bazel -empty -delete",
+        """sed -i 's|addResource("ClockGate.sv")|addResource("hdl/verilog/ClockGate.sv")|' hdl/chisel/src/coralnpu/ClockGate.scala""",
+        """sed -i 's|addResource("RstSync.sv")|addResource("hdl/verilog/RstSync.sv")|' hdl/chisel/src/coralnpu/RstSync.scala""",
+    ],
+    patches = [
+        "//designs/src/coralnpu/chisel:patches/chisel7-compat.patch",
+        # HighTide memory refactor: replace the generic hdl/verilog/Sram_*.v
+        # with FakeRAM-backed blackboxes (module Sram_512x128 -> fakeram_512x128,
+        # from macros.v).  Was a manual cp in the old setup.sh; now declarative.
+        "//designs/src/coralnpu/chisel:patches/fakeram-memories.patch",
+    ],
+    sha256 = "39ba6fff9342f2be2b3c8cfad4dd82a1d2481b53b67963d3248461562b81d042",
+    strip_prefix = "coralnpu-04c48f55d0f9933f6fea69c429e1790e0ae18647",
+    urls = ["https://github.com/google-coral/coralnpu/archive/04c48f55d0f9933f6fea69c429e1790e0ae18647.tar.gz"],
+)
+
+http_archive(
+    name = "rocket_chip",
+    build_file = "//designs/src/coralnpu/chisel:rocket_chip.BUILD.bazel",
+    sha256 = "76076a7e7538dd347074d7dc056cfa6219a6dfdeed58bb47c848b435f27c30f8",
+    strip_prefix = "rocket-chip-f517abbf41abb65cea37421d3559f9739efd00a9",
+    urls = ["https://github.com/chipsalliance/rocket-chip/archive/f517abbf41abb65cea37421d3559f9739efd00a9.tar.gz"],
+)
+
+http_archive(
+    name = "diplomacy",
+    build_file = "//designs/src/coralnpu/chisel:diplomacy.BUILD.bazel",
+    sha256 = "33a66aa60e565b9665dcfc93020f5acf64710a7dc4f2b164752544ec5a946256",
+    strip_prefix = "diplomacy-6590276fa4dac315ae7c7c01371b954c5687a473",
+    urls = ["https://github.com/chipsalliance/diplomacy/archive/6590276fa4dac315ae7c7c01371b954c5687a473.tar.gz"],
+)
+
+http_archive(
+    name = "common_cells",
+    build_file = "//designs/src/coralnpu/chisel:common_cells.BUILD.bazel",
+    sha256 = "ea112e598908b9cfd03254aeb676ff8b51196b186ab00bdb5e2ad90a73a3055e",
+    strip_prefix = "common_cells-6aeee85d0a34fedc06c14f04fd6363c9f7b4eeea",
+    urls = ["https://github.com/pulp-platform/common_cells/archive/6aeee85d0a34fedc06c14f04fd6363c9f7b4eeea.tar.gz"],
+)
+
+http_archive(
+    name = "cvfpu",
+    build_file = "//designs/src/coralnpu/chisel:cvfpu.BUILD.bazel",
+    patch_args = ["-p1"],
+    patches = [
+        "//designs/src/coralnpu/chisel:patches/cvfpu-0001-max_num_lanes.patch",
+        "//designs/src/coralnpu/chisel:patches/cvfpu-0003-fill-unreachable.patch",
+    ],
+    sha256 = "1446d4528bcff472ea50f656f529c7dd126b117587c0b334d391cbd1e0997553",
+    strip_prefix = "cvfpu-58ca3c376beb914b2b80b811d4b270c063d4e6f7",
+    urls = ["https://github.com/openhwgroup/cvfpu/archive/58ca3c376beb914b2b80b811d4b270c063d4e6f7.tar.gz"],
+)
+
+http_archive(
+    name = "fpu_div_sqrt_mvp",
+    build_file = "//designs/src/coralnpu/chisel:fpu_div_sqrt_mvp.BUILD.bazel",
+    sha256 = "2647be453d3dbb7315d7018235ab64b9178ed387c3ff0d2f48d106bac6ab2ece",
+    strip_prefix = "fpu_div_sqrt_mvp-86e1f558b3c95e91577c41b2fc452c86b04e85ac",
+    urls = ["https://github.com/pulp-platform/fpu_div_sqrt_mvp/archive/86e1f558b3c95e91577c41b2fc452c86b04e85ac.tar.gz"],
 )

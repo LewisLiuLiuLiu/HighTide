@@ -4,6 +4,40 @@ Per-platform notes on tuning, workarounds, and platform-specific quirks for `cor
 
 Mid-large NPU with several FakeRAM macros.  Hierarchical synthesis required for tractable build times.
 
+## Hermetic RTL generation (2026-07, gallery-style Chisel 7)
+
+coralnpu is the one design that could not preserve its exact prior RTL while
+becoming hermetic (its old flow was a *nested* Bazel 7.4.1 Chisel-7 build +
+sv2v + heavy perl, none of which is hermetic in the parent Bazel).  It was
+therefore **ported to the bazel-orfs gallery's Chisel-7 flow**, which *does*
+change the RTL/QoR (accepted trade-off) — see the flagged delta below.
+
+- **Toolchain**: `rules_chisel` 0.3.1 elaborates the Chisel 7 sources to FIRRTL;
+  `fir_library` + `verilog_directory` (bazel-orfs-verilog) run **firtool** to
+  SystemVerilog.  Runs on **Scala 2.13.17** (the cross-build version), coexisting
+  with the 2.13.12 used by the Chisel-3.6.1 designs (sha3/gemmini) via
+  `scala_config.settings(scala_versions=[...])` + the `scala_version` attribute.
+- **Source**: `@coralnpu` (google-coral) at the gallery's SHA `04c48f55` (the old
+  submodule was `7731fd6e`), plus its Chisel-7 dep tree (`@rocket_chip`,
+  `@diplomacy`, `@common_cells`, `@cvfpu`, `@fpu_div_sqrt_mvp`).  Patched with
+  the gallery's `chisel7-compat.patch` + the two `cvfpu-*` patches.
+- **Memory refactor as a declarative patch**: `patches/fakeram-memories.patch`
+  replaces `hdl/verilog/Sram_512x128.v` / `Sram_2048x128.v` with FakeRAM-backed
+  blackboxes (`module Sram_512x128 -> fakeram_512x128`, from `macros.v` →
+  `fakeram_512x128_1rw` in `sram/` LEF+LIB).  Was a manual `cp` in the old
+  `setup.sh`; now applied on `@coralnpu`.
+- **Frontend**: the generated SystemVerilog is fed to **yosys-slang**
+  (`SYNTH_HDL_FRONTEND=slang` + `SYNTH_SLANG_ARGS` with the common_cells include
+  dir), matching the gallery — not the old sv2v/perl Verilog-2005 path.
+- `:rtl` = `//designs/src/coralnpu/chisel:coralnpu_all_sv` + `macros.v`.  The
+  submodule, `setup.sh`, `install/`, and `Sram_*_REPLACE.v` are removed;
+  `macros.v`, `sram/` LEF+LIB, and `dev/generated/fakeram_*.cfg` are kept.
+
+**QoR change (flagged regression)**: the new Chisel-7 RTL differs structurally
+from the old sv2v/perl output, so QoR shifts from the results.html baseline
+(die 112967 / core 111567 / util 40.5 / cells 156942 / Fmax 0.35 / power 71.4).
+See the per-platform QoR captured after this port lands.
+
 ## Common to all platforms
 
 - `SYNTH_HIERARCHICAL = 1` — flat synthesis runs out of memory / time on this design's hierarchy.
