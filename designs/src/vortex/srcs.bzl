@@ -204,5 +204,10 @@ def _include_dirs_str(prefix):
         dirs.append(p)
     return " ".join(dirs)
 
-VORTEX_INCLUDE_DIRS_RELEASE_STR = _include_dirs_str("designs/src/vortex/rtl")
-VORTEX_INCLUDE_DIRS_DEV_STR = _include_dirs_str("designs/src/vortex/dev/gen/rtl")
+# Include dirs point at the hermetically-fetched upstream tree (@vortex_src).
+# hw/dpi is added for util_dpi.vh (included by VX_platform.vh under `SV_DPI).
+VORTEX_INCLUDE_DIRS_RELEASE_STR = (
+    _include_dirs_str("external/+_repo_rules+vortex_src/hw/rtl") +
+    " external/+_repo_rules+vortex_src/hw/dpi"
+)
+VORTEX_INCLUDE_DIRS_DEV_STR = ""

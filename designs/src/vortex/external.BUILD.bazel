@@ -1,0 +1,22 @@
+# Injected BUILD for @vortex_src (vortexgpgpu/vortex).  Exposes the upstream
+# hw/rtl tree; the design BUILD selects the VORTEX_FILES subset and overlays
+# the local VX_{dp,sp}_ram FakeRAM stubs.
+exports_files(
+    glob(["hw/rtl/**/*"], allow_empty = True),
+    visibility = ["//visibility:public"],
+)
+
+# Header/include files staged for VERILOG_INCLUDE_DIRS resolution.  hw/dpi
+# carries util_dpi.vh, included by hw/rtl/VX_platform.vh under `SV_DPI.
+filegroup(
+    name = "headers",
+    srcs = glob(
+        [
+            "hw/rtl/**/*.vh",
+            "hw/rtl/**/*.svh",
+            "hw/dpi/**/*.vh",
+        ],
+        allow_empty = True,
+    ),
+    visibility = ["//visibility:public"],
+)

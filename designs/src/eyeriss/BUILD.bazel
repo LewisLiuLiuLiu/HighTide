@@ -1,34 +1,34 @@
-filegroup(
-    name = "rtl_release",
-    srcs = ["eyeriss.v"],
-)
-
-# update-rtl mode: init submodule + concatenate FPGA_design source files
-# (skipping the FPGA-only TOP wrappers, UART, display, and IO modules) and
-# append fakeram wrappers for the Xilinx BRAM IPs.
+# eyeriss RTL is assembled hermetically by Bazel: the ASIC-relevant Verilog
+# from upstream (@eyeriss_src, minus FPGA-only tops/HMI + the duplicate CSC
+# FIFO) is concatenated in stable order, the upstream empty `else if()` stub is
+# fixed to `else if (1'b0)`, and the FakeRAM IP shims (dev/macros_template.v)
+# are appended.  No dev/repo submodule, no setup.sh.
 genrule(
-    name = "rtl_dev_gen",
+    name = "gen_eyeriss",
     srcs = [
-        "dev/setup.sh",
+        "@eyeriss_src//:src_v",
         "dev/macros_template.v",
     ],
-    outs = ["dev_eyeriss.v"],
-    local = True,
+    outs = ["eyeriss.v"],
     cmd = """
-        WORKSPACE_ROOT=$$(readlink -f $(location //:tools/update_rtl.sh) | sed 's|/tools/update_rtl.sh||')
-        cd $$WORKSPACE_ROOT
-        git submodule update --init designs/src/eyeriss/dev/repo >&2
-        bash designs/src/eyeriss/dev/setup.sh >&2
-        cp designs/src/eyeriss/dev/generated/eyeriss.v $$OLDPWD/$(location dev_eyeriss.v)
-    """,
-    tools = ["//:tools/update_rtl.sh"],
+set -e
+OUT=$@
+: > "$$OUT"
+# Concatenate the source .v files in stable (repo-relative) sorted order,
+# with a normalized header path (strip the bazel external-repo prefix).
+for f in $$(echo '$(locations @eyeriss_src//:src_v)' | tr ' ' '\\n' | sort); do
+    rel=$$(echo "$$f" | sed -E 's#.*/(FPGA_design/src/.*)#\\1#')
+    echo "// ===== $$rel =====" >> "$$OUT"
+    cat "$$f" >> "$$OUT"
+    echo "" >> "$$OUT"
+done
+sed -i "s/else if()/else if (1'b0)/g" "$$OUT"
+cat $(location dev/macros_template.v) >> "$$OUT"
+""",
 )
 
 alias(
     name = "rtl",
-    actual = select({
-        "//:update_rtl": ":rtl_dev_gen",
-        "//conditions:default": ":rtl_release",
-    }),
+    actual = ":gen_eyeriss",
     visibility = ["//visibility:public"],
 )
