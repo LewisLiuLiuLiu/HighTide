@@ -1,0 +1,16 @@
+# Shared injected BUILD for the PULP-platform bender dependencies of FlooNoC
+# (apb / axi / axi_stream / common_cells / obi / register_interface /
+# tech_cells_generic).  Each is fetched as a pinned http_archive at its
+# Bender.lock revision; the design BUILD selects the exact source subset (see
+# designs/src/floonoc/srcs.bzl) instead of running bender.
+exports_files(
+    glob(["**/*"], allow_empty = True),
+    visibility = ["//visibility:public"],
+)
+
+# Header include tree, staged for VERILOG_INCLUDE_DIRS resolution.
+filegroup(
+    name = "include",
+    srcs = glob(["include/**"], allow_empty = True),
+    visibility = ["//visibility:public"],
+)

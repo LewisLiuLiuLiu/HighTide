@@ -1,0 +1,26 @@
+# PyPI closure for the FlooGen NoC generator (floogen ships inside @floonoc_src;
+# see MODULE.bazel).  Consumed by pip.parse(hub_name = "pip_floogen").  Resolved
+# from floogen's declared deps (pydantic/networkx/matplotlib/mako/ruamel.yaml/
+# click) — matplotlib is imported at module scope in floogen/model/network.py, so
+# it (and its numpy/pillow/etc. closure) is required even for the rtl path.
+annotated-types==0.8.0
+click==8.4.2
+contourpy==1.3.3
+cycler==0.12.1
+fonttools==4.63.0
+kiwisolver==1.5.0
+Mako==1.3.12
+MarkupSafe==3.0.3
+matplotlib==3.11.1
+networkx==3.6.1
+numpy==2.5.1
+packaging==26.2
+pillow==12.3.0
+pydantic==2.13.4
+pydantic_core==2.46.4
+pyparsing==3.3.2
+python-dateutil==2.9.0.post0
+ruamel.yaml==0.19.1
+six==1.17.0
+typing_extensions==4.16.0
+typing-inspection==0.4.2

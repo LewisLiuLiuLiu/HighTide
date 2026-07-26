@@ -243,6 +243,76 @@ http_archive(
     urls = ["https://github.com/enjoy-digital/liteiclink/archive/ef9c29506c9c8e5d733a54403c6a9ec1df5babd5.tar.gz"],
 )
 
+# --- FlooNoC network-on-chip + its PULP bender dependencies ---
+# The narrow-wide mesh is assembled from pinned upstream archives instead of
+# running bender: FlooNoC itself plus the seven dependency repos it pulls, each
+# at its Bender.lock revision.  FlooGen (bundled in @floonoc_src) generates the
+# mesh topology under Bazel; its PyPI deps come from the pip_floogen hub below.
+# The seven PULP deps share one injected build_file (pulp_dep.BUILD.bazel).
+http_archive(
+    name = "floonoc_src",
+    build_file = "//designs/src/floonoc:floonoc_src.BUILD.bazel",
+    sha256 = "57d8960374c55ace2a0ff9afc2a7e919b307251cf3e38e99f53d6bd059a2266e",
+    strip_prefix = "FlooNoC-064df1651f3d870cf4774c8c7d7439984bfb11d1",
+    urls = ["https://github.com/pulp-platform/FlooNoC/archive/064df1651f3d870cf4774c8c7d7439984bfb11d1.tar.gz"],
+)
+
+http_archive(
+    name = "pulp_apb_src",
+    build_file = "//designs/src/floonoc:pulp_dep.BUILD.bazel",
+    sha256 = "921cc1546cbb9311d0fc1dc05efb26511871d1272dd468f4904d4d220817bb3a",
+    strip_prefix = "apb-77ddf073f194d44b9119949d2421be59789e69ae",
+    urls = ["https://github.com/pulp-platform/apb/archive/77ddf073f194d44b9119949d2421be59789e69ae.tar.gz"],
+)
+
+http_archive(
+    name = "pulp_axi_src",
+    build_file = "//designs/src/floonoc:pulp_dep.BUILD.bazel",
+    sha256 = "0cd034d0162a441eb98df7731840b49152009310481909edae26a74a6e549ab7",
+    strip_prefix = "axi-a256a3b86394fedf19e361047fccfdd7f6ef83e4",
+    urls = ["https://github.com/pulp-platform/axi/archive/a256a3b86394fedf19e361047fccfdd7f6ef83e4.tar.gz"],
+)
+
+http_archive(
+    name = "pulp_axi_stream_src",
+    build_file = "//designs/src/floonoc:pulp_dep.BUILD.bazel",
+    sha256 = "05f084e6dc0eee14f1c93af0361b9add40b59ae51bd73aadd832bf8758432c2e",
+    strip_prefix = "axi_stream-54891ff40455ca94a37641b9da4604647878cc07",
+    urls = ["https://github.com/pulp-platform/axi_stream/archive/54891ff40455ca94a37641b9da4604647878cc07.tar.gz"],
+)
+
+http_archive(
+    name = "pulp_common_cells_src",
+    build_file = "//designs/src/floonoc:pulp_dep.BUILD.bazel",
+    sha256 = "bfae706c79684ba4d005ce337a3a7d3a25cf64570c5ad73bae9d44feaf90b324",
+    strip_prefix = "common_cells-9ca8a7655f741e7dd5736669a20a301325194c28",
+    urls = ["https://github.com/pulp-platform/common_cells/archive/9ca8a7655f741e7dd5736669a20a301325194c28.tar.gz"],
+)
+
+http_archive(
+    name = "pulp_obi_src",
+    build_file = "//designs/src/floonoc:pulp_dep.BUILD.bazel",
+    sha256 = "3b5b78958ad3817e092a3050c2f23b72e813bc1410f08f19b0580c7f1ebc400a",
+    strip_prefix = "obi-0155fc34e900c7c884e081c0a1114a247937ff69",
+    urls = ["https://github.com/pulp-platform/obi/archive/0155fc34e900c7c884e081c0a1114a247937ff69.tar.gz"],
+)
+
+http_archive(
+    name = "pulp_register_interface_src",
+    build_file = "//designs/src/floonoc:pulp_dep.BUILD.bazel",
+    sha256 = "64fbbe94f5a985ef0a1a167d1f4996c9fcd230fb230b643a1ae12165335412b1",
+    strip_prefix = "register_interface-d6e1d4cdaab7870f4faf3f88a1c788eaf5ac129d",
+    urls = ["https://github.com/pulp-platform/register_interface/archive/d6e1d4cdaab7870f4faf3f88a1c788eaf5ac129d.tar.gz"],
+)
+
+http_archive(
+    name = "pulp_tech_cells_generic_src",
+    build_file = "//designs/src/floonoc:pulp_dep.BUILD.bazel",
+    sha256 = "771eca488cdd6bd1c96fe777cde862ed2389c29da31f99bfa079060b59c7c3a9",
+    strip_prefix = "tech_cells_generic-7968dd6e6180df2c644636bc6d2908a49f2190cf",
+    urls = ["https://github.com/pulp-platform/tech_cells_generic/archive/7968dd6e6180df2c644636bc6d2908a49f2190cf.tar.gz"],
+)
+
 # --- sv2v (SystemVerilog -> Verilog-2005) prebuilt release binary ---
 # Shared by the sv2v-lowered designs (minimax, NyuziProcessor).  Pinning the
 # prebuilt v0.0.13 release replaces building sv2v from an unpinned Haskell
@@ -291,6 +361,15 @@ pip.parse(
     requirements_lock = "//designs/src/litedram:requirements_lock.txt",
 )
 use_repo(pip, "pip_litex")
+
+# FlooGen NoC-generator leaf deps (floogen itself ships in @floonoc_src).
+# Separate hub so its version set (pydantic/matplotlib/mako/...) is isolated.
+pip.parse(
+    hub_name = "pip_floogen",
+    python_version = "3.13",
+    requirements_lock = "//designs/src/floonoc:requirements_lock.txt",
+)
+use_repo(pip, "pip_floogen")
 
 # --- Scala/Chisel toolchain (for the Chisel-generated designs sha3/gemmini) ---
 # Runs the Chisel emitters under Bazel (scala_binary) instead of sbt-from-curl.
