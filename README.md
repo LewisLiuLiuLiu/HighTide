@@ -37,7 +37,7 @@ tools/bazel_to_orfs.sh //designs/asap7/...
 # Run a prepared bundle — on this or any machine, no bazel, no HighTide
 # checkout (needs an ORFS install with yosys + yosys-slang and an openroad):
 FLOW_HOME=~/OpenROAD-flow-scripts OPENROAD_EXE=~/OpenROAD/build/src/openroad \
-  .run_orfs/asap7/lfsr/run.sh
+  .orfs_bundles/asap7/lfsr/run.sh
 
 # Prepare + run locally against your own ORFS install, through placement:
 tools/bazel_to_orfs.sh --run --flow-home ~/OpenROAD-flow-scripts \
