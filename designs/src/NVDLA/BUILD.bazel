@@ -4,15 +4,18 @@
 # Per verilog.mk, only vmod/{rams/synth, vlibs, nvdla} + macros.v are
 # fed to synthesis; vmod/rams/{model,fpga} are simulation-only.
 #
-# Release RTL is pre-generated and committed under vmod/. See
-# dev/setup.sh + dev/install/* for the dev-mode generation flow
-# (downloads JDK11, OpenSSL 1.0.2u, Perl 5.10.1, Python 2.7.18,
-# SystemC 2.3.0, then runs `perl tools/bin/tmake -build vmod` against
-# the nv_small project and substitutes a pre-baked NV_NVDLA_cfgrom.v).
+# NVDLA is the one HighTide design whose RTL is NOT hermetically fetchable.
+# vmod/ is the *output* of NVDLA's legacy spec build (Perl 5.10.1 + Python
+# 2.7.18 + JDK11 + SystemC 2.3.0 running `perl tools/bin/tmake -build vmod`
+# over the parameterized nvdla/hw nv_small source, then substituting a
+# pre-baked NV_NVDLA_cfgrom.v) — a toolchain that cannot be reproduced as a
+# hermetic Bazel genrule.  So vmod/ stays committed and the Bazel build reads
+# it directly; there is no submodule and no build-time generation.
 #
-# The dev path is heavyweight (multi-hour, network downloads, host
-# tooling) and is not wrapped as a Bazel genrule — run setup.sh
-# manually then re-stage vmod/ to refresh release RTL.
+# To refresh vmod/ (rare), run dev/setup.sh: it clones the pinned nvdla/hw
+# nv_small source on demand (SHA 771f20cc, into the gitignored dev/repo/,
+# replacing the retired submodule), installs the legacy toolchain, runs tmake,
+# and re-stages vmod/.  Heavyweight (multi-hour, network) and manual.
 
 filegroup(
     name = "include",

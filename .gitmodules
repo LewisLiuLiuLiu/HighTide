@@ -1,7 +1,3 @@
-[submodule "designs/src/NVDLA/dev/repo"]
-	path = designs/src/NVDLA/dev/repo
-	url = https://github.com/nvdla/hw.git
-	branch = nv_small
 [submodule "tools/bsg_fakeram"]
 	path = tools/bsg_fakeram
 	url = https://github.com/VLSIDA/bsg_fakeram.git

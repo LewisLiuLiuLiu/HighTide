@@ -12,6 +12,12 @@ Per-platform notes for NVDLA `nv_small` (NVIDIA Deep Learning Accelerator), spli
 
 FakeRAM macros live at `designs/<platform>/NVDLA/sram/{lef,lib}/`; the per-partition filegroups in each platform's `BUILD.bazel` carry the macros each partition needs.
 
+## Hermetic RTL sourcing (2026-07)
+
+**NVDLA is the one HighTide design that is not migrated to `http_archive` RTL sourcing — by necessity, not omission.** Its RTL (`vmod/`, 546 committed files) is the *output* of NVDLA's legacy spec build: `perl tools/bin/tmake -build vmod` run under Perl 5.10.1 + Python 2.7.18 + JDK11 + SystemC 2.3.0 over the parameterized `nvdla/hw` `nv_small` source, with a pre-baked `NV_NVDLA_cfgrom.v` substituted. That toolchain cannot be reproduced as a hermetic Bazel genrule (the deferred hard case from the migration plan), so the generated `vmod/` stays committed and the Bazel build reads it directly — exactly as before.
+
+What *did* change: the `dev/repo` **submodule (`nvdla/hw` @ `771f20cc`, `nv_small`) is removed** — it was never referenced by the build (`:rtl` = committed `vmod/` + `macros.v` + `dev/generated/sram_ff/*.v`, no `update_rtl` select), so it only bloated fresh checkouts / k8s pods. `.gitmodules` now has **no design submodules** (NVDLA was the last). Regeneration still works: `dev/setup.sh` now clones the pinned `nvdla/hw` `nv_small` source on demand into the gitignored `dev/repo/` instead of relying on the submodule. Verified: `:rtl` builds (430 synth files) with no submodule present.
+
 ## FakeRAM regeneration (2026-05-13)
 
 - **Generator**: `bsg_fakeram` (VLSIDA fork @ `asap7-area-calib-v2`), invoked via `tools/regenerate_sram.sh NVDLA <platform>` per platform.
