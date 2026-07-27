@@ -1,0 +1,13 @@
+# Injected BUILD for @nvdla_hw_src (nvdla/hw, nv_small branch).  Exposes the
+# entire upstream tree; the design's gen_vmod genrule copies it to a writable
+# dir and runs `tmake -build vmod` over it (the retired dev/setup.sh flow).
+exports_files(
+    glob(["**/*"], allow_empty = True, exclude = ["**/.git/**"]),
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "all",
+    srcs = glob(["**/*"], allow_empty = True, exclude = ["**/.git/**"]),
+    visibility = ["//visibility:public"],
+)

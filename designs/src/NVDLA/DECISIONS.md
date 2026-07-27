@@ -14,9 +14,21 @@ FakeRAM macros live at `designs/<platform>/NVDLA/sram/{lef,lib}/`; the per-parti
 
 ## Hermetic RTL sourcing (2026-07)
 
-**NVDLA is the one HighTide design that is not migrated to `http_archive` RTL sourcing — by necessity, not omission.** Its RTL (`vmod/`, 546 committed files) is the *output* of NVDLA's legacy spec build: `perl tools/bin/tmake -build vmod` run under Perl 5.10.1 + Python 2.7.18 + JDK11 + SystemC 2.3.0 over the parameterized `nvdla/hw` `nv_small` source, with a pre-baked `NV_NVDLA_cfgrom.v` substituted. That toolchain cannot be reproduced as a hermetic Bazel genrule (the deferred hard case from the migration plan), so the generated `vmod/` stays committed and the Bazel build reads it directly — exactly as before.
+NVDLA's RTL (`vmod/`, 546 files) is the *output* of NVDLA's spec build: `tmake -build vmod` over the parameterized `nvdla/hw` `nv_small` source, with a pre-baked `NV_NVDLA_cfgrom.v` substituted. The retired `dev/setup.sh` did this by downloading and running Perl 5.10.1 + Python 2.7.18 + JDK11 + SystemC 2.3.0 — the deferred hard case.
 
-What *did* change: the `dev/repo` **submodule (`nvdla/hw` @ `771f20cc`, `nv_small`) is removed** — it was never referenced by the build (`:rtl` = committed `vmod/` + `macros.v` + `dev/generated/sram_ff/*.v`, no `update_rtl` select), so it only bloated fresh checkouts / k8s pods. `.gitmodules` now has **no design submodules** (NVDLA was the last). Regeneration still works: `dev/setup.sh` now clones the pinned `nvdla/hw` `nv_small` source on demand into the gitignored `dev/repo/` instead of relying on the submodule. Verified: `:rtl` builds (430 synth files) with no submodule present.
+**It is now a hermetic Bazel genrule** (`//designs/src/NVDLA:gen_vmod`). The legacy pins are *not* required — the vmod build reproduces **byte-for-byte** (all 546 files) with modern, Bazel-provided tools:
+
+| Retired (setup.sh download) | gen_vmod uses |
+|---|---|
+| perl 5.10.1 | system perl + `dev/perl_lib/` (vendored pure-perl `YAML` + `XML::Simple`/`XML::SAX`) |
+| python 2.7.18 | `rules_python` python3 (`$(PYTHON3)`) |
+| JDK 11 (for `Ordt.jar`) | `rules_java` JDK (`$(JAVA)`) |
+| SystemC 2.3.0 | not needed (cmod/sim only) |
+
+- `@nvdla_hw_src` (`http_archive`, pinned `771f20cc`, nv_small) supplies the source; `gen_vmod` copies it to a writable tree, runs `tmake -build vmod` with `dev/tree.make` (tool paths made overridable → modern tools), substitutes the cfgrom, drops the `.vcp` cpp-intermediates, and emits the 546-file vmod (enumerated in `vmod_files.bzl`). Generated headers live under `bazel-out/…/vmod/{include,vlibs}`, so the partition BUILDs' `VERILOG_INCLUDE_DIRS` point there.
+- **SRAM patching is the committed-override layer** (`macros.v` RAMDP/RAMPDP→FakeRAM bridge + `dev/generated/sram_ff/*.v` FF stubs), same pattern as bp_processor — unchanged by this migration; the generated rams instantiate `RAMDP_*`/`RAMPDP_*` which `macros.v` maps to `fakeram_*`.
+
+Removed: the `dev/repo` submodule (`.gitmodules` now has **no design submodules** — NVDLA was the last), `dev/setup.sh`, and `dev/install/*` (the legacy toolchain downloads). Verified: `gen_vmod` output is byte-identical to the previously-committed `vmod/`; `:rtl` builds; partition_m + partition_a synth clean (the latter exercising the FakeRAM/FF SRAM layer).
 
 ## FakeRAM regeneration (2026-05-13)
 

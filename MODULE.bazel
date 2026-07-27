@@ -445,6 +445,22 @@ http_archive(
     urls = ["https://github.com/bsg-external/HardFloat/archive/5b7d5fe2df7e297b5ba095b3eb8a9517dc2e9d88.tar.gz"],
 )
 
+# --- NVDLA hw source (nv_small) for the hermetic vmod spec-build ---
+# NVDLA's RTL is the *output* of `tmake -build vmod` over this parameterized
+# source.  Unlike the other designs (whose upstream ships ready RTL), NVDLA
+# needs the legacy spec build run — but it reproduces byte-for-byte with modern
+# tools: system perl + the vendored pure-perl modules (designs/src/NVDLA/dev/
+# perl_lib: YAML + XML::Simple), rules_python's python3, and rules_java's JDK
+# (SystemC/JDK11/perl-5.10 from the retired setup.sh are NOT required).  See the
+# gen_vmod genrule in designs/src/NVDLA/BUILD.bazel.
+http_archive(
+    name = "nvdla_hw_src",
+    build_file = "//designs/src/NVDLA:nvdla_hw.BUILD.bazel",
+    sha256 = "3b5ac66cb796e8c1ad297051ba1af167769f895fd3bf083f7611585e5db65e66",
+    strip_prefix = "hw-771f20cc9e69759d7277978eb41e8d47f1547374",
+    urls = ["https://github.com/nvdla/hw/archive/771f20cc9e69759d7277978eb41e8d47f1547374.tar.gz"],
+)
+
 # --- sv2v (SystemVerilog -> Verilog-2005) prebuilt release binary ---
 # Shared by the sv2v-lowered designs (minimax, NyuziProcessor).  Pinning the
 # prebuilt v0.0.13 release replaces building sv2v from an unpinned Haskell

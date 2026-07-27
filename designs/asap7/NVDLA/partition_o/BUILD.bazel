@@ -15,7 +15,7 @@ hightide_design(
     stage_data = {"synth": ["//designs/src/NVDLA:include"]},
     arguments = {
         "SYNTH_HIERARCHICAL": "1",
-        "VERILOG_INCLUDE_DIRS": "designs/src/NVDLA/vmod/include designs/src/NVDLA/vmod/vlibs",
+        "VERILOG_INCLUDE_DIRS": "bazel-out/k8-fastbuild/bin/designs/src/NVDLA/vmod/include bazel-out/k8-fastbuild/bin/designs/src/NVDLA/vmod/vlibs",
         # Util relaxed 45→40 on the bazel-orfs 553c1c3 / OpenROAD 299f3015
         # upgrade: the new global router tips util 45 into GRT-0116
         # congestion (it suggested lowering layer adjustment 25→18%);
