@@ -1,6 +1,6 @@
 """Shared constants for bp_processor designs."""
 
-load("//designs/src/bp_processor:release_srcs.bzl", "BP_INCLUDE_DIRS_STR")
+load("//designs/src/bp_processor:srcs.bzl", "BP_INCLUDE_DIRS_STR")
 
 # Blackboxed modules: bsg_mem_*_synth (replaced by FakeRAM macros at synthesis)
 # and all fakeram_* modules (LEF-only, no RTL needed).

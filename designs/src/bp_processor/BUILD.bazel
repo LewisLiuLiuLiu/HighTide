@@ -1,79 +1,43 @@
-# bp_processor uses yosys-slang for direct SystemVerilog synthesis.
-# BP_SRCS: ordered source files from flist.vcs (passed as VERILOG_FILES)
-# rtl_data: all repo HDL files for sandbox include dir resolution
-#           (via stage_data, NOT in VERILOG_FILES)
+# Black-Parrot RTL sources (hermetic).
+#
+# BlackParrot's bp_top/flist.vcs is curated in srcs.bzl (285 files) and sourced
+# from three pinned http_archives — @bp_processor_src (BP hw) + its two vendored
+# submodules @bp_basejump_stl_src / @bp_hardfloat_src — instead of the committed
+# release/repo vendored tree or the dev/repo submodule.  yosys-slang reads the
+# SystemVerilog directly (SYNTH_HDL_FRONTEND=slang).
+#
+# BP_SRCS   -> VERILOG_FILES (the compile list).
+# :rtl_data -> staged into the synth sandbox for `include resolution (the full
+#              archive HDL trees), NOT added to VERILOG_FILES.
+#
+# bsg_mem_*_synth modules are dropped from the compile list — the per-platform
+# macros.v provides FakeRAM-backed replacements; stubs.v carries the small
+# behavioural FF memories bsg_fakeram can't size.
 
-load("//designs/src/bp_processor:release_srcs.bzl", _REL_SRCS = "BP_SRCS")
-load("//designs/src/bp_processor:dev/generated/srcs.bzl", _DEV_SRCS = "BP_SRCS")
+load("//designs/src/bp_processor:srcs.bzl", "BP_SRCS")
 
-# Exclude bsg_mem_*_synth modules — macros.v provides FakeRAM replacements
+# bsg_mem_*_synth are replaced by macros.v FakeRAM wrappers.
 _EXCLUDED_SUFFIXES = [
     "bsg_mem_1rw_sync_synth.sv",
     "bsg_mem_1rw_sync_mask_write_bit_synth.sv",
 ]
 
 filegroup(
-    name = "rtl_release",
-    srcs = [f for f in _REL_SRCS if not any([f.endswith(e) for e in _EXCLUDED_SUFFIXES])] + ["stubs.v"],
-)
-
-filegroup(
-    name = "rtl_dev",
-    srcs = [f for f in _DEV_SRCS if not any([f.endswith(e) for e in _EXCLUDED_SUFFIXES])] + ["stubs.v"],
-)
-
-alias(
     name = "rtl",
-    actual = select({
-        "//:update_rtl": ":rtl_dev",
-        "//conditions:default": ":rtl_release",
-    }),
+    srcs = [f for f in BP_SRCS if not any([f.endswith(e) for e in _EXCLUDED_SUFFIXES])] + ["stubs.v"],
     visibility = ["//visibility:public"],
 )
 
+# Full archive HDL trees, staged into the synth sandbox via the platform BUILDs'
+# stage_data so yosys-slang resolves `include (bsg_defines.svh, bp_*_defines.svh,
+# HardFloat headers) without the headers being added to the compile list.
 filegroup(
-    name = "rtl_data_release",
-    srcs = glob(
-        [
-            "release/repo/**/*.sv",
-            "release/repo/**/*.svh",
-            "release/repo/**/*.vh",
-            "release/repo/**/*.vi",
-            "release/repo/**/*.v",
-        ],
-        exclude = [
-            "release/repo/**/test/**",
-            "release/repo/**/testing/**",
-            "release/repo/**/ARM-VFPv2/**",
-        ],
-        allow_empty = True,
-    ),
-)
-
-filegroup(
-    name = "rtl_data_dev",
-    srcs = glob(
-        [
-            "dev/repo/**/*.sv",
-            "dev/repo/**/*.svh",
-            "dev/repo/**/*.vh",
-            "dev/repo/**/*.vi",
-            "dev/repo/**/*.v",
-        ],
-        exclude = [
-            "dev/repo/**/test/**",
-            "dev/repo/**/testing/**",
-            "dev/repo/**/ARM-VFPv2/**",
-        ],
-        allow_empty = True,
-    ),
-)
-
-alias(
     name = "rtl_data",
-    actual = select({
-        "//:update_rtl": ":rtl_data_dev",
-        "//conditions:default": ":rtl_data_release",
-    }),
+    srcs = [
+        ":rtl",
+        "@bp_processor_src//:hdl",
+        "@bp_basejump_stl_src//:hdl",
+        "@bp_hardfloat_src//:hdl",
+    ],
     visibility = ["//visibility:public"],
 )

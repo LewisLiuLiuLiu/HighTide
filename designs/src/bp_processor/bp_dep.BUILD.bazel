@@ -1,0 +1,29 @@
+# Shared injected BUILD for the Black-Parrot source archives (@bp_processor_src,
+# @bp_basejump_stl_src, @bp_hardfloat_src).  Each is a pinned http_archive; the
+# design BUILD selects the exact flist subset (designs/src/bp_processor/srcs.bzl)
+# for VERILOG_FILES and stages the full HDL tree for `include resolution.
+exports_files(
+    glob(["**/*"], allow_empty = True),
+    visibility = ["//visibility:public"],
+)
+
+# Every HDL file (for the synth sandbox's include dirs), minus test/verif trees.
+filegroup(
+    name = "hdl",
+    srcs = glob(
+        [
+            "**/*.sv",
+            "**/*.svh",
+            "**/*.vh",
+            "**/*.vi",
+            "**/*.v",
+        ],
+        exclude = [
+            "**/test/**",
+            "**/testing/**",
+            "**/ARM-VFPv2/**",
+        ],
+        allow_empty = True,
+    ),
+    visibility = ["//visibility:public"],
+)

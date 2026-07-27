@@ -414,6 +414,37 @@ http_archive(
     urls = ["https://github.com/NNgen/nngen/archive/d5ac0cc931ffcfdb6ced63123248cdcbc6cfe7bd.tar.gz"],
 )
 
+# --- Black-Parrot RISC-V processor + its vendored submodules ---
+# BlackParrot's bp_top/flist.vcs drives direct SystemVerilog synthesis via
+# yosys-slang; the flist references BP's own hw plus two vendored submodules
+# (basejump_stl, HardFloat).  Replaces the committed release/repo vendored tree
+# (~500K lines) with pinned archives; the exact flist subset is in srcs.bzl.
+# bedrock is NOT fetched — its only files.txt hits are BP-own bp_*bedrock*.sv.
+# The three share one injected build_file (bp_dep.BUILD.bazel).
+http_archive(
+    name = "bp_processor_src",
+    build_file = "//designs/src/bp_processor:bp_dep.BUILD.bazel",
+    sha256 = "e170d33c6265e545fedb46d6a99989bdcd105ffe83a6e1d0034ccc8a4d39f033",
+    strip_prefix = "black-parrot-05ef10db21254c0b54fac4439a08de8329b05699",
+    urls = ["https://github.com/black-parrot/black-parrot/archive/05ef10db21254c0b54fac4439a08de8329b05699.tar.gz"],
+)
+
+http_archive(
+    name = "bp_basejump_stl_src",
+    build_file = "//designs/src/bp_processor:bp_dep.BUILD.bazel",
+    sha256 = "add92d9a330cc1b370dc05cb2133b341c91cd1df52cc59cf4c122972680bb42b",
+    strip_prefix = "basejump_stl-b7788905f9a1f42d097b2917812cd6b6615c646b",
+    urls = ["https://github.com/bespoke-silicon-group/basejump_stl/archive/b7788905f9a1f42d097b2917812cd6b6615c646b.tar.gz"],
+)
+
+http_archive(
+    name = "bp_hardfloat_src",
+    build_file = "//designs/src/bp_processor:bp_dep.BUILD.bazel",
+    sha256 = "a83efaa8c390cc314f055a8e185d5d83e03c0fb12d420f02e2ac94680e97e0b1",
+    strip_prefix = "HardFloat-5b7d5fe2df7e297b5ba095b3eb8a9517dc2e9d88",
+    urls = ["https://github.com/bsg-external/HardFloat/archive/5b7d5fe2df7e297b5ba095b3eb8a9517dc2e9d88.tar.gz"],
+)
+
 # --- sv2v (SystemVerilog -> Verilog-2005) prebuilt release binary ---
 # Shared by the sv2v-lowered designs (minimax, NyuziProcessor).  Pinning the
 # prebuilt v0.0.13 release replaces building sv2v from an unpinned Haskell
