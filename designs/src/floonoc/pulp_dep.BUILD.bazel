@@ -8,9 +8,19 @@ exports_files(
     visibility = ["//visibility:public"],
 )
 
-# Header include tree, staged for VERILOG_INCLUDE_DIRS resolution.
+# Header include trees, staged for VERILOG_INCLUDE_DIRS resolution.  Most PULP
+# repos put headers at the repo-root include/, but a few (e.g. iDMA) nest them
+# under src/include and target/rtl/include — glob all three (allow_empty, so
+# repos lacking a given tree contribute nothing).
 filegroup(
     name = "include",
-    srcs = glob(["include/**"], allow_empty = True),
+    srcs = glob(
+        [
+            "include/**",
+            "src/include/**",
+            "target/rtl/include/**",
+        ],
+        allow_empty = True,
+    ),
     visibility = ["//visibility:public"],
 )

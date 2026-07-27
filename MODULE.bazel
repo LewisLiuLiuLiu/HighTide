@@ -313,6 +313,95 @@ http_archive(
     urls = ["https://github.com/pulp-platform/tech_cells_generic/archive/7968dd6e6180df2c644636bc6d2908a49f2190cf.tar.gz"],
 )
 
+# --- Snitch cluster + its additional PULP bender dependencies ---
+# Reuses five of FlooNoC's archives at the same Bender.lock revisions (apb,
+# axi_stream, obi, tech_cells_generic, register_interface).  These ten are
+# snitch-specific: the main repo, the colluca/axi fork + a different
+# common_cells SHA than FlooNoC's (hence distinct @snitch_* names), and the
+# six deps FlooNoC lists-but-excludes (fpnew/idma/... which snitch actually
+# uses).  clustergen (bundled in @snitch_cluster_src) generates the cluster
+# wrapper/pkg; its PyPI deps come from the pip_clustergen hub below.  All PULP
+# deps share the floonoc pulp_dep.BUILD.bazel build file.
+http_archive(
+    name = "snitch_cluster_src",
+    build_file = "//designs/src/snitch_cluster:snitch_cluster_src.BUILD.bazel",
+    sha256 = "30c3cbde1ca8adf2462bfb8af89281f0a154e3951607aba231303dda6a3e2380",
+    strip_prefix = "snitch_cluster-2fa38482c2c822bfbedfdfd87abb3ed45521646e",
+    urls = ["https://github.com/pulp-platform/snitch_cluster/archive/2fa38482c2c822bfbedfdfd87abb3ed45521646e.tar.gz"],
+)
+
+http_archive(
+    name = "snitch_axi_src",
+    build_file = "//designs/src/floonoc:pulp_dep.BUILD.bazel",
+    sha256 = "9cdea3404b48667e47814ac938424bab837598f4131c069e7bb5b80d5182d4ad",
+    strip_prefix = "axi-06410c36819924e32db2afa428d244dbdbcd5d4e",
+    urls = ["https://github.com/colluca/axi/archive/06410c36819924e32db2afa428d244dbdbcd5d4e.tar.gz"],
+)
+
+http_archive(
+    name = "snitch_common_cells_src",
+    build_file = "//designs/src/floonoc:pulp_dep.BUILD.bazel",
+    sha256 = "40a68b4f361d448ce0904d62475b38590d78f82a2e0b0bb92d5a03e6641bc443",
+    strip_prefix = "common_cells-ca9d577f2fbc45ec557ab4e0905bbfc154441540",
+    urls = ["https://github.com/pulp-platform/common_cells/archive/ca9d577f2fbc45ec557ab4e0905bbfc154441540.tar.gz"],
+)
+
+http_archive(
+    name = "pulp_axi_riscv_atomics_src",
+    build_file = "//designs/src/floonoc:pulp_dep.BUILD.bazel",
+    sha256 = "d1ebd479ad72af59d016829d216ff208e69d0332f414a5e3576c176b646bef53",
+    strip_prefix = "axi_riscv_atomics-0ac3a78fe342c5a5b9b10bff49d58897f773059e",
+    urls = ["https://github.com/pulp-platform/axi_riscv_atomics/archive/0ac3a78fe342c5a5b9b10bff49d58897f773059e.tar.gz"],
+)
+
+http_archive(
+    name = "pulp_cluster_icache_src",
+    build_file = "//designs/src/floonoc:pulp_dep.BUILD.bazel",
+    sha256 = "e0e088b2e4215e01d4d97d54cdf82c988284b0aaf92542a4e2656d2208eb5b1a",
+    strip_prefix = "cluster_icache-1642961b9561513f283674efc2c90f24855e8d39",
+    urls = ["https://github.com/pulp-platform/cluster_icache/archive/1642961b9561513f283674efc2c90f24855e8d39.tar.gz"],
+)
+
+http_archive(
+    name = "pulp_fpnew_src",
+    build_file = "//designs/src/floonoc:pulp_dep.BUILD.bazel",
+    sha256 = "d048ba21228e4ffa12d0bc1c1f6a61baab755422b765661c103c3cddf1c77671",
+    strip_prefix = "cvfpu-e5aa6a01b5bbe1675c3aa8872e1203413ded83d1",
+    urls = ["https://github.com/pulp-platform/cvfpu/archive/e5aa6a01b5bbe1675c3aa8872e1203413ded83d1.tar.gz"],
+)
+
+http_archive(
+    name = "pulp_fpu_div_sqrt_mvp_src",
+    build_file = "//designs/src/floonoc:pulp_dep.BUILD.bazel",
+    sha256 = "2647be453d3dbb7315d7018235ab64b9178ed387c3ff0d2f48d106bac6ab2ece",
+    strip_prefix = "fpu_div_sqrt_mvp-86e1f558b3c95e91577c41b2fc452c86b04e85ac",
+    urls = ["https://github.com/pulp-platform/fpu_div_sqrt_mvp/archive/86e1f558b3c95e91577c41b2fc452c86b04e85ac.tar.gz"],
+)
+
+http_archive(
+    name = "pulp_idma_src",
+    build_file = "//designs/src/floonoc:pulp_dep.BUILD.bazel",
+    sha256 = "1d43045ca3854aa979730f72095a577a646f19a441622aa3eee052770e791f74",
+    strip_prefix = "iDMA-28a36e5e07705549e59fc33db96ab681bc1ca88e",
+    urls = ["https://github.com/pulp-platform/iDMA/archive/28a36e5e07705549e59fc33db96ab681bc1ca88e.tar.gz"],
+)
+
+http_archive(
+    name = "pulp_riscv_dbg_src",
+    build_file = "//designs/src/floonoc:pulp_dep.BUILD.bazel",
+    sha256 = "d455e7900b1b6b9df52ddf8e4c4248a3477f6f01ff882fd74dc346cbfe426921",
+    strip_prefix = "riscv-dbg-358f90110220adf7a083f8b65d157e836d706236",
+    urls = ["https://github.com/pulp-platform/riscv-dbg/archive/358f90110220adf7a083f8b65d157e836d706236.tar.gz"],
+)
+
+http_archive(
+    name = "pulp_scm_src",
+    build_file = "//designs/src/floonoc:pulp_dep.BUILD.bazel",
+    sha256 = "00d58aae6547e0cdc0a0e54820824ab742e43f8bf77aa2f83fc1c4be7de6c031",
+    strip_prefix = "scm-1976c7efb4979271eee2abe262fde0f9a20e2557",
+    urls = ["https://github.com/pulp-platform/scm/archive/1976c7efb4979271eee2abe262fde0f9a20e2557.tar.gz"],
+)
+
 # --- sv2v (SystemVerilog -> Verilog-2005) prebuilt release binary ---
 # Shared by the sv2v-lowered designs (minimax, NyuziProcessor).  Pinning the
 # prebuilt v0.0.13 release replaces building sv2v from an unpinned Haskell
@@ -370,6 +459,16 @@ pip.parse(
     requirements_lock = "//designs/src/floonoc:requirements_lock.txt",
 )
 use_repo(pip, "pip_floogen")
+
+# Snitch clustergen leaf deps (clustergen ships in @snitch_cluster_src).
+# Separate hub isolating json5/jsonref/jsonschema/mako.  (peakrdl deliberately
+# omitted — the peripheral reg files ship pre-generated in the archive.)
+pip.parse(
+    hub_name = "pip_clustergen",
+    python_version = "3.13",
+    requirements_lock = "//designs/src/snitch_cluster:requirements_lock.txt",
+)
+use_repo(pip, "pip_clustergen")
 
 # --- Scala/Chisel toolchain (for the Chisel-generated designs sha3/gemmini) ---
 # Runs the Chisel emitters under Bazel (scala_binary) instead of sbt-from-curl.

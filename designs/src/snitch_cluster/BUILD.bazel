@@ -1,38 +1,63 @@
-# Snitch Cluster RTL sources.
+# Snitch Cluster RTL sources (hermetic).
 #
-# This design uses yosys-slang (SYNTH_HDL_FRONTEND=slang) to read
-# SystemVerilog directly. setup.sh runs bender + clustergen and copies
-# all dependency sources and headers into generated/deps/ with clean
-# package names (no bender git hashes).
+# The cluster is assembled from pinned upstream http_archives instead of bender
+# (the bazel-orfs/gallery cva6 idiom): @snitch_cluster_src (the cluster hw/) +
+# fourteen PULP dependency archives at their Bender.lock revisions — five reused
+# from FlooNoC (apb/axi_stream/obi/tech_cells_generic/register_interface), the
+# colluca/axi fork + a snitch-specific common_cells SHA (@snitch_*), and the
+# six deps FlooNoC excludes (fpnew/idma/cluster_icache/axi_riscv_atomics/scm/
+# fpu_div_sqrt_mvp).  The exact source subset is curated in srcs.bzl (the
+# retired `bender script` flist, 377 files).
+#
+# clustergen (bundled in @snitch_cluster_src) generates the cluster wrapper +
+# pkg under Bazel from cluster_cfg.json.  The peripheral_reg[_pkg].sv files ship
+# pre-generated in the archive (peakrdl never runs), so they come from
+# @snitch_cluster_src.  snitch_bootrom.sv (combinational bootrom) and tc_sram.sv
+# (fakeram-backed SRAM override) are committed HighTide files.
 
-# update-rtl mode: init submodule + run setup.sh to regenerate.
-genrule(
-    name = "rtl_dev_gen",
-    srcs = glob(
-        ["dev/**"],
-        exclude = [
-            "dev/generated/**",
-            "dev/repo/**",
-            "dev/.venv/**",
-            "dev/bender",
-        ],
-    ),
-    outs = ["snitch_cluster_rtl.tar"],
-    local = True,
-    cmd = """
-        WORKSPACE_ROOT=$$(readlink -f $(location //:tools/update_rtl.sh) | sed 's|/tools/update_rtl.sh||')
-        cd $$WORKSPACE_ROOT
-        git submodule update --init designs/src/snitch_cluster/dev/repo >&2
-        bash designs/src/snitch_cluster/dev/setup.sh >&2
-        tar cf $(OUTS) designs/src/snitch_cluster/dev/generated/deps/
-    """,
-    tools = [
-        "dev/setup.sh",
-        "//:tools/update_rtl.sh",
-    ],
+load("@rules_python//python:defs.bzl", "py_binary")
+load(":srcs.bzl", "SNITCH_SRCS")
+
+# Hermetic clustergen wrapper/pkg generator (clustergen ships in
+# @snitch_cluster_src; json5/jsonref/jsonschema/mako from pip_clustergen).
+py_binary(
+    name = "snitch_cluster_gen",
+    srcs = ["clustergen_gen_main.py"],
+    main = "clustergen_gen_main.py",
+    visibility = ["//visibility:private"],
+    deps = ["@snitch_cluster_src//:clustergen"],
 )
 
-# SRAM macro LEF/LIB files
+# Generate the cluster wrapper + package from cluster_cfg.json (two clustergen
+# passes, one per template).  Deterministic — byte-reproduces the committed RTL.
+genrule(
+    name = "gen_snitch_cluster",
+    srcs = [
+        "dev/cluster_cfg.json",
+        "@snitch_cluster_src//:hw/snitch_cluster/src/snitch_cluster_wrapper.sv.tpl",
+        "@snitch_cluster_src//:hw/snitch_cluster/src/snitch_cluster_pkg.sv.tpl",
+    ],
+    outs = [
+        "snitch_cluster_wrapper.sv",
+        "snitch_cluster_pkg.sv",
+    ],
+    cmd = """
+set -e
+GEN=$$(readlink -f $(execpath :snitch_cluster_gen))
+CFG=$$(readlink -f $(execpath dev/cluster_cfg.json))
+WTPL=$$(readlink -f $(execpath @snitch_cluster_src//:hw/snitch_cluster/src/snitch_cluster_wrapper.sv.tpl))
+PTPL=$$(readlink -f $(execpath @snitch_cluster_src//:hw/snitch_cluster/src/snitch_cluster_pkg.sv.tpl))
+OUTDIR=$$(pwd)/_snitch_gen
+mkdir -p "$$OUTDIR"
+( cd "$$OUTDIR" && HOME="$$OUTDIR" "$$GEN" "$$CFG" "$$WTPL" "$$OUTDIR/wrapper.sv" "$$PTPL" "$$OUTDIR/pkg.sv" ) >/dev/null
+cp "$$OUTDIR/wrapper.sv" $(location snitch_cluster_wrapper.sv)
+cp "$$OUTDIR/pkg.sv" $(location snitch_cluster_pkg.sv)
+rm -rf "$$OUTDIR"
+""",
+    tools = [":snitch_cluster_gen"],
+)
+
+# SRAM macro LEF/LIB (fakeram7_*; behavioural tc_sram.sv override committed).
 filegroup(
     name = "sram_lefs",
     srcs = glob(["dev/generated/sram/*/*.lef"]),
@@ -45,16 +70,31 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
-# RTL sources: generated .sv files + bender dependency copies (no git hashes)
+# Full curated source list: upstream RTL (pinned archives) + clustergen output
+# + committed bootrom / tc_sram overrides.
 filegroup(
     name = "rtl",
-    srcs = glob(
-        ["dev/generated/**/*.sv"],
-        exclude = ["dev/generated/sram/**"],
-        allow_empty = True,
-    ) + glob(
-        ["dev/generated/deps/include/**/*.svh"],
-        allow_empty = True,
-    ),
+    srcs = SNITCH_SRCS,
+    visibility = ["//visibility:public"],
+)
+
+# Compile sources + upstream include trees (`*.svh` macros; common_cells/axi/
+# etc. registers/assertions plus the snitch hw/**/include dirs).  Staged into
+# the synth sandbox via the platform BUILDs' stage_data so yosys-slang resolves
+# `include without the headers being added to the compile list.
+filegroup(
+    name = "rtl_data",
+    srcs = [
+        ":rtl",
+        "@snitch_cluster_src//:hw_includes",
+        "@pulp_apb_src//:include",
+        "@pulp_axi_stream_src//:include",
+        "@pulp_cluster_icache_src//:include",
+        "@pulp_idma_src//:include",
+        "@pulp_obi_src//:include",
+        "@pulp_register_interface_src//:include",
+        "@snitch_axi_src//:include",
+        "@snitch_common_cells_src//:include",
+    ],
     visibility = ["//visibility:public"],
 )
