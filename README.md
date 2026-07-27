@@ -24,30 +24,50 @@ point. But if you want to experiment with **a custom OpenROAD build**,
 `OpenROAD-flow-scripts` (a single `config.mk` + the standard `Makefile`)
 is the easier interface. Two tools bridge the gap.
 
-### One command: `tools/run_orfs.sh`
+### One command: `tools/bazel_to_orfs.sh`
 
 ```bash
-# Fast, zero-setup: reuse the golden synthesized netlist + bazel openroad,
-# full place-and-route:
-tools/run_orfs.sh designs/asap7/lfsr
+# Prepare a design as a portable, self-contained ORFS bundle (the default —
+# does NOT run; prints instructions on how to):
+tools/bazel_to_orfs.sh designs/asap7/lfsr
 
-# Your own OpenROAD build, only through placement:
-tools/run_orfs.sh --openroad ~/OpenROAD/build/src/openroad \
-                  designs/asap7/lfsr floorplan place
+# Prepare every asap7 design as portable bundles:
+tools/bazel_to_orfs.sh //designs/asap7/...
 
-# Re-synthesize from RTL in your own ORFS install (its yosys + slang):
-tools/run_orfs.sh --resynth --flow-home ~/OpenROAD-flow-scripts designs/asap7/lfsr
+# Run a prepared bundle — on this or any machine, no bazel, no HighTide
+# checkout (needs an ORFS install with yosys + yosys-slang and an openroad):
+FLOW_HOME=~/OpenROAD-flow-scripts OPENROAD_EXE=~/OpenROAD/build/src/openroad \
+  .run_orfs/asap7/lfsr/run.sh
 
-# Batch: run (or prepare) many designs with a bazel-style pattern. Stage
-# every asap7 design without running, then run one later / on another
-# machine — no bazel needed at run time:
-tools/run_orfs.sh --prepare-only //designs/asap7/...
-OPENROAD_EXE=~/OpenROAD/build/src/openroad .run_orfs/asap7/lfsr/run.sh
+# Prepare + run locally against your own ORFS install, through placement:
+tools/bazel_to_orfs.sh --run --flow-home ~/OpenROAD-flow-scripts \
+  designs/asap7/lfsr synth floorplan place
 ```
 
+**What it produces.** For each design it materializes the RTL via bazel
+(fetching the hermetic `http_archive` sources / running any RTL genrules —
+but *not* synthesis), extracts the resolved `config.mk`, and copies every
+input into a self-contained, relocatable bundle:
+
+```
+<work-dir>/
+  inputs/      every input — RTL, includes, SDC, LEF/LIB, tcl. config.mk
+               references them via $(PREPARED_INPUTS), so the bundle resolves
+               wherever it is copied.
+  config.mk    the resolved ORFS design config
+  run.sh       runs the full flow from RTL against an ORFS install
+```
+
+Copy the whole `<work-dir>` to any machine and run its `run.sh` — no bazel,
+no HighTide checkout. The bundle runs the **whole flow from RTL**
+(`synth → finish`), so the machine running it needs an OpenROAD-flow-scripts
+install whose `tools/install` has **yosys + yosys-slang**, plus an openroad.
+(For the pure-bazel full flow with zero setup, just
+`bazel build //designs/<plat>/<design>:<design>_final`.)
+
 **Design patterns.** The target can be one design or a bazel-style pattern
-that expands to many (the flow runs once per design, continuing past
-failures and printing a summary):
+that expands to many (each is prepared — or, with `--run`, run — in turn,
+continuing past failures and printing a summary):
 
 | Pattern | Matches |
 |---|---|
@@ -64,40 +84,21 @@ sub-package. Pass the sub-design path, not the container:
 `designs/asap7/NVDLA/partition_a`, `designs/asap7/bp_processor/bp_uno`, etc.
 (Pass the container and the script lists the available sub-designs.)
 
-**Prepare vs. run (`--prepare-only`):** by default `run_orfs.sh` prepares
-*and* runs. With `--prepare-only` it stops after staging the work dir
-(`config.mk` + the seeded golden netlist) and writes a self-contained
-`run.sh` there — so you can prep a batch of designs in one loop, then run
-each `run.sh` whenever/wherever you like. `run.sh` needs no bazel and lets
-you override `OPENROAD_EXE`, `FLOW_HOME`, or the make targets at run time.
-
-It extracts the design's resolved `config.mk` and runs the standard ORFS
-`Makefile`. There are two synthesis modes:
-
-- **Default (reuse synth):** reuses the synthesized netlist bazel-orfs
-  already produced (`results/.../1_synth.{odb,sdc}`) and runs only
-  floorplan onward. Fast and zero-setup — **no yosys/slang needed** — and
-  runs against the ORFS bazel-orfs already resolved. Best for iterating on
-  placement, routing, or the OpenROAD binary (`--openroad` sets
-  `OPENROAD_EXE`). The netlist already reflects your constraints/RTL *if*
-  you rebuild through bazel; to re-synthesize entirely in plain ORFS, use
-  `--resynth`.
-- **`--resynth` (from RTL):** runs the *whole* flow including synthesis in
-  your ORFS install, using its own yosys + yosys-slang. Honors changes to
-  constraints, RTL, or the synthesis flow itself — but slower, and requires
-  `--flow-home` pointing at a **built** OpenROAD-flow-scripts install (one
-  whose `tools/install` has yosys; ORFS's slang support is built in).
-
-To **edit flow scripts or steps**, point `--flow-home` at your own ORFS
-checkout and edit `flow/scripts/*.tcl` there.
+**Prepare vs. run (`--run`):** by default `bazel_to_orfs.sh` **prepares
+only** — it stages the portable bundle and prints how to run it, without
+running ORFS. Pass `--run` (with `--flow-home <ORFS>`) to also run the
+bundle locally after preparing. Either way the bundle runs the whole flow
+from RTL in a plain ORFS install, so you can swap in a custom `openroad`
+(`--openroad` / `OPENROAD_EXE`), edit `flow/scripts/*.tcl` in your ORFS
+checkout, or change the make targets.
 
 **QoR comparability:** HighTide's published numbers come from the bazel-orfs
 build, which pins specific tool commits (bazel-orfs, OpenROAD, and the ORFS
-commit `run_orfs.sh` prints). A `--resynth` run against a *different* ORFS /
-yosys shifts the baseline, and some extracted `config.mk` workaround
-variables (e.g. `SKIP_CTS_REPAIR_TIMING`, `SETUP_MOVE_SEQUENCE`, `write_sdc`
-async-reset edits) may be unnecessary or stale — review them against your
-ORFS.
+commit `bazel_to_orfs.sh` prints on `--run`). Running a bundle against a
+*different* ORFS / yosys shifts the baseline, and some extracted `config.mk`
+workaround variables (e.g. `SKIP_CTS_REPAIR_TIMING`, `SETUP_MOVE_SEQUENCE`,
+`write_sdc` async-reset edits) may be unnecessary or stale — review them
+against your ORFS.
 
 ### Just the config.mk: `tools/bazel_to_config_mk.sh`
 
@@ -112,9 +113,9 @@ make -C OpenROAD-flow-scripts/flow DESIGN_CONFIG=/tmp/lfsr.config.mk
 This costs no synthesis or place-and-route: it builds only each stage's
 `<stage>.mk` config output group (cheap bazel *analysis*, seconds), unions
 the `export VAR?=VALUE` lines, strips Bazel-internal vars, and adds the
-cquery-resolved `VERILOG_FILES`. (`run_orfs.sh`'s default reuse-synth mode
-additionally builds just the `_synth` stage to get the netlist; `--resynth`
-re-synthesizes in your ORFS install and needs no bazel flow build at all.)
+cquery-resolved `VERILOG_FILES`. (`bazel_to_orfs.sh` builds on this: it also
+materializes the RTL and copies every input into a self-contained bundle so
+the design runs off-machine.)
 
 ### Alternative: a custom OpenROAD inside bazel-orfs (binary swap only)
 
