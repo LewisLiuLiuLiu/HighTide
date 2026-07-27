@@ -9,6 +9,16 @@ Per-platform notes for Black-Parrot, an open-source RISC-V multicore from the BS
 
 FakeRAM macros live at `designs/<platform>/bp_processor/sram/{lef,lib}/`. The wrapper `designs/<platform>/bp_processor/macros.v` swaps `bsg_mem_*_synth` instances for hard macros above a 1024-bit threshold and lets the rest synthesize as FF arrays.
 
+## Hermetic RTL sourcing (2026-07)
+
+The RTL is sourced hermetically by Bazel — no `dev/repo` submodule, no committed `release/repo` vendored tree, no `dev/setup.sh` flist parse:
+
+- **Three pinned `http_archive`s** replace the ~500K-line vendored `release/repo` copy: `@bp_processor_src` (BlackParrot `05ef10db`) + its two vendored submodules `@bp_basejump_stl_src` (`b7788905`) and `@bp_hardfloat_src` (`5b7d5fe2`). `bedrock` is **not** fetched — its only `flist.vcs` hits are BP-own `bp_*bedrock*.sv` files (in `@bp_processor_src`), not the `external/bedrock` submodule. The three share one injected build file (`bp_dep.BUILD.bazel`).
+- **`srcs.bzl`** carries the curated `bp_top/flist.vcs` subset (285 files → `VERILOG_FILES`) mapped to archive labels, plus `BP_INCLUDE_DIRS_STR` (14 include dirs → `external/+_repo_rules+...`). `bsg_mem_*_synth` are dropped (macros.v FakeRAM wrappers); `stubs.v` carries the small FF memories bsg_fakeram can't size.
+- `:rtl_data` stages the full archive HDL trees into the synth sandbox (`stage_data`) for `` `include `` resolution; yosys-slang reads the SystemVerilog directly (`SYNTH_HDL_FRONTEND=slang`).
+
+**Verification**: `:rtl` builds and bp_uno-asap7 elaborates + synthesizes clean through yosys-slang (all FakeRAM macros resolved); the **asap7 `_final` netlist matches the `results.html` baseline exactly on logic** — seq **39641** identical, comb within 0.06 %, die/core/util/macros/ios identical — with P&R within tool noise (bufinv +2.1 %, WNS −510 → **+145 ps** better, Fmax +25 %). Removed the submodule, `setup.sh`, `release/repo`, and `release_srcs.bzl`; kept `dev/gen_macros_v.py` / `dev/patch_mem.py`, the `dev/generated/fakeram_*.cfg` + `sram/` macros, and the sky130hd macro-grid.
+
 ## FakeRAM regeneration (2026-05-13)
 
 - **Generator**: `bsg_fakeram` (VLSIDA fork @ `asap7-area-calib-v2`, with `write_granularity: 1` enabled for per-bit write masks). Run via `tools/regenerate_sram.sh bp_processor <platform>`.
