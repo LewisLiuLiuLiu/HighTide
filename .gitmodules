@@ -1,6 +1,3 @@
-[submodule "designs/src/cnn/dev/repo"]
-	path = designs/src/cnn/dev/repo
-	url = https://github.com/NNgen/nngen
 [submodule "designs/src/bp_processor/dev/repo"]
 	path = designs/src/bp_processor/dev/repo
 	url = https://github.com/black-parrot/black-parrot.git

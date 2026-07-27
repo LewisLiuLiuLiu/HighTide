@@ -1,0 +1,30 @@
+# Injected BUILD for @nngen_src (NNgen/nngen).  Exposes the nngen package and
+# its bundled `examples/` (the CNN model builder lives at examples/cnn/cnn.py)
+# as a py_library run under the :cnn_gen py_binary.  veriloggen/onnx/numpy come
+# from the pip_nngen hub; their transitive deps (pyverilog, ply, jinja2, ...)
+# are wired automatically by pip.parse from requirements_lock.txt.
+py_library(
+    name = "nngen",
+    srcs = glob(
+        [
+            "nngen/**/*.py",
+            "examples/**/*.py",
+            "onnx_tools/**/*.py",
+        ],
+        allow_empty = True,
+    ),
+    # nngen/version.py reads nngen/VERSION at import time; carry non-.py package
+    # data (VERSION and any bundled assets) like litex's include_package_data.
+    data = glob(
+        ["nngen/**/*"],
+        exclude = ["nngen/**/*.py", "**/__pycache__/**"],
+        allow_empty = True,
+    ),
+    imports = ["."],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@pip_nngen//numpy",
+        "@pip_nngen//onnx",
+        "@pip_nngen//veriloggen",
+    ],
+)

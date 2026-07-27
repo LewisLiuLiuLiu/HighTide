@@ -402,6 +402,18 @@ http_archive(
     urls = ["https://github.com/pulp-platform/scm/archive/1976c7efb4979271eee2abe262fde0f9a20e2557.tar.gz"],
 )
 
+# --- NNgen CNN accelerator generator ---
+# examples/cnn/cnn.py builds a small quantized CNN and emits the accelerator
+# RTL via veriloggen; run under Bazel (py_binary), so no venv / setup.sh.  The
+# PyPI leaf deps (veriloggen/onnx/numpy/...) come from the pip_nngen hub below.
+http_archive(
+    name = "nngen_src",
+    build_file = "//designs/src/cnn:nngen.BUILD.bazel",
+    sha256 = "9ba7532bad950cd42748cd845f219ea23fdb6ed666068f966e1a6907308aa9c4",
+    strip_prefix = "nngen-d5ac0cc931ffcfdb6ced63123248cdcbc6cfe7bd",
+    urls = ["https://github.com/NNgen/nngen/archive/d5ac0cc931ffcfdb6ced63123248cdcbc6cfe7bd.tar.gz"],
+)
+
 # --- sv2v (SystemVerilog -> Verilog-2005) prebuilt release binary ---
 # Shared by the sv2v-lowered designs (minimax, NyuziProcessor).  Pinning the
 # prebuilt v0.0.13 release replaces building sv2v from an unpinned Haskell
@@ -469,6 +481,15 @@ pip.parse(
     requirements_lock = "//designs/src/snitch_cluster:requirements_lock.txt",
 )
 use_repo(pip, "pip_clustergen")
+
+# NNgen CNN generator leaf deps (nngen itself is @nngen_src).  Separate hub so
+# its version set (veriloggen/onnx/numpy/...) is isolated from pip_litex.
+pip.parse(
+    hub_name = "pip_nngen",
+    python_version = "3.13",
+    requirements_lock = "//designs/src/cnn:requirements_lock.txt",
+)
+use_repo(pip, "pip_nngen")
 
 # --- Scala/Chisel toolchain (for the Chisel-generated designs sha3/gemmini) ---
 # Runs the Chisel emitters under Bazel (scala_binary) instead of sbt-from-curl.

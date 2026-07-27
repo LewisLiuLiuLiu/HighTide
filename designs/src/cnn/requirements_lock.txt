@@ -1,0 +1,15 @@
+# PyPI leaf dependencies for the NNgen CNN generator toolchain (nngen itself
+# is fetched as a source archive — see @nngen_src in MODULE.bazel).  Consumed
+# by pip.parse(hub_name = "pip_nngen").  These are the exact pins from the
+# retired dev/requirements.txt that produced the committed cnn.v; veriloggen
+# emits the Verilog and onnx/numpy back nngen's quantized model builder.
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+ml_dtypes==0.5.3
+numpy==2.3.4
+onnx==1.19.1
+ply==3.11
+protobuf==6.33.0
+pyverilog==1.3.0
+typing_extensions==4.15.0
+veriloggen==2.3.0
