@@ -1,46 +1,76 @@
-# FlooNoC RTL sources.
+# FlooNoC RTL sources (hermetic).
 #
-# This design uses yosys-slang (SYNTH_HDL_FRONTEND=slang) to read
-# SystemVerilog directly. setup.sh runs bender + floogen and copies
-# all dependency sources and headers into generated/deps/ with clean
-# package names (no bender git hashes).
+# The narrow-wide 4x4 mesh is assembled from pinned upstream http_archives
+# instead of bender: @floonoc_src (FlooNoC hw/) + the seven PULP dependency
+# archives (apb/axi/axi_stream/common_cells/obi/register_interface/
+# tech_cells_generic), each at its Bender.lock revision.  The exact source
+# subset is curated in srcs.bzl (the retired `bender script` flist).  FlooGen
+# generates the mesh topology (floo_floonoc_mesh_noc[_pkg].sv) under Bazel from
+# mesh_config.yml; cluster_blackbox.sv / floonoc_mesh_top.sv are the committed
+# HighTide wrappers (16 black-box cluster endpoints around the mesh).
+#
+# Consumed with SYNTH_HDL_FRONTEND=slang; the platform BUILDs point
+# VERILOG_INCLUDE_DIRS at the @*_src include trees.
 
-# update-rtl mode: init submodule + run setup.sh to regenerate.
-genrule(
-    name = "rtl_dev_gen",
-    srcs = glob(
-        ["dev/**"],
-        exclude = [
-            "dev/generated/**",
-            "dev/repo/**",
-            "dev/.venv/**",
-            "dev/bender",
-        ],
-    ),
-    outs = ["floonoc_rtl.tar"],
-    local = True,
-    cmd = """
-        WORKSPACE_ROOT=$$(readlink -f $(location //:tools/update_rtl.sh) | sed 's|/tools/update_rtl.sh||')
-        cd $$WORKSPACE_ROOT
-        git submodule update --init designs/src/floonoc/dev/repo >&2
-        bash designs/src/floonoc/dev/setup.sh >&2
-        tar cf $(OUTS) designs/src/floonoc/dev/generated/deps/
-    """,
-    tools = [
-        "dev/setup.sh",
-        "//:tools/update_rtl.sh",
-    ],
+load("@rules_python//python:defs.bzl", "py_binary")
+load(":srcs.bzl", "FLOONOC_SRCS")
+
+# Hermetic FlooGen generator (floogen ships in @floonoc_src; pip_floogen hub).
+py_binary(
+    name = "floonoc_gen",
+    srcs = ["floogen_gen_main.py"],
+    main = "floogen_gen_main.py",
+    visibility = ["//visibility:private"],
+    deps = ["@floonoc_src//:floogen"],
 )
 
-# RTL sources: generated .sv files + bender dependency copies (no git hashes)
+# Generate the mesh package + top from mesh_config.yml.  floogen writes both
+# files into the output dir; --no-format skips the (non-hermetic) verible pass.
+genrule(
+    name = "gen_floonoc_mesh",
+    srcs = ["dev/mesh_config.yml"],
+    outs = [
+        "floo_floonoc_mesh_noc_pkg.sv",
+        "floo_floonoc_mesh_noc.sv",
+    ],
+    cmd = """
+set -e
+GEN=$$(readlink -f $(execpath :floonoc_gen))
+YML=$$(readlink -f $(execpath dev/mesh_config.yml))
+OUTDIR=$$(pwd)/_floogen_out
+mkdir -p "$$OUTDIR"
+( cd "$$OUTDIR" && HOME="$$OUTDIR" MPLBACKEND=Agg "$$GEN" "$$YML" "$$OUTDIR" ) >/dev/null
+cp "$$OUTDIR/floo_floonoc_mesh_noc_pkg.sv" $(location floo_floonoc_mesh_noc_pkg.sv)
+cp "$$OUTDIR/floo_floonoc_mesh_noc.sv" $(location floo_floonoc_mesh_noc.sv)
+rm -rf "$$OUTDIR"
+""",
+    tools = [":floonoc_gen"],
+)
+
+# Full curated source list: upstream RTL (pinned archives) + floogen output +
+# the two committed mesh wrappers.
 filegroup(
     name = "rtl",
-    srcs = glob(
-        ["dev/generated/**/*.sv"],
-        allow_empty = True,
-    ) + glob(
-        ["dev/generated/deps/include/**/*.svh"],
-        allow_empty = True,
-    ),
+    srcs = FLOONOC_SRCS,
+    visibility = ["//visibility:public"],
+)
+
+# Compile sources + the upstream include trees (`*.svh` macros like `ASSERT /
+# `FFARN / common_cells/registers.svh).  Staged into the synth sandbox via the
+# platform BUILDs' stage_data so yosys-slang can resolve `include without the
+# headers being added to the compile list.  Dirs are named in
+# VERILOG_INCLUDE_DIRS (see the platform BUILDs).
+filegroup(
+    name = "rtl_data",
+    srcs = [
+        ":rtl",
+        "@floonoc_src//:hw_include",
+        "@pulp_apb_src//:include",
+        "@pulp_axi_src//:include",
+        "@pulp_axi_stream_src//:include",
+        "@pulp_common_cells_src//:include",
+        "@pulp_obi_src//:include",
+        "@pulp_register_interface_src//:include",
+    ],
     visibility = ["//visibility:public"],
 )

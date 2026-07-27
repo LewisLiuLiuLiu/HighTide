@@ -1,0 +1,26 @@
+# Shared injected BUILD for the PULP-platform bender dependencies of FlooNoC
+# (apb / axi / axi_stream / common_cells / obi / register_interface /
+# tech_cells_generic).  Each is fetched as a pinned http_archive at its
+# Bender.lock revision; the design BUILD selects the exact source subset (see
+# designs/src/floonoc/srcs.bzl) instead of running bender.
+exports_files(
+    glob(["**/*"], allow_empty = True),
+    visibility = ["//visibility:public"],
+)
+
+# Header include trees, staged for VERILOG_INCLUDE_DIRS resolution.  Most PULP
+# repos put headers at the repo-root include/, but a few (e.g. iDMA) nest them
+# under src/include and target/rtl/include — glob all three (allow_empty, so
+# repos lacking a given tree contribute nothing).
+filegroup(
+    name = "include",
+    srcs = glob(
+        [
+            "include/**",
+            "src/include/**",
+            "target/rtl/include/**",
+        ],
+        allow_empty = True,
+    ),
+    visibility = ["//visibility:public"],
+)

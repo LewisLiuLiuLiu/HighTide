@@ -8,6 +8,17 @@ wrapper instantiates. Carries `SKIP_CTS_REPAIR_TIMING` + `SKIP_INCREMENTAL_REPAI
 (repair non-convergence on the RTL-bounded endpoints) and, on asap7, a DPL-0036
 `PRE_CTS_TCL`. Only asap7 / nangate45 are in scope (no sky130hd port).
 
+## Hermetic RTL sourcing (2026-07)
+
+The cluster is assembled hermetically by Bazel — no `dev/repo` submodule, no bender, no `dev/setup.sh` venv:
+
+- **Bender is bypassed** (the bazel-orfs/gallery cva6 idiom): `@snitch_cluster_src` (the cluster `hw/`) + **fourteen** PULP dependency `http_archive`s at their `Bender.lock` revisions — five reused from FlooNoC (apb/axi_stream/obi/tech_cells_generic/register_interface), the **`colluca/axi` fork** + a snitch-specific `common_cells` SHA (distinct `@snitch_*` names), and the six deps FlooNoC excludes but snitch uses (fpnew/idma/cluster_icache/axi_riscv_atomics/scm/fpu_div_sqrt_mvp). The exact source subset (377 files) is curated in **`srcs.bzl`** (the retired `bender script` flist). All PULP deps share `//designs/src/floonoc:pulp_dep.BUILD.bazel`.
+- **clustergen runs under Bazel**: `:snitch_cluster_gen` (py_binary, clustergen bundled in `@snitch_cluster_src`) renders `snitch_cluster_wrapper.sv` + `_pkg.sv` from `dev/cluster_cfg.json` (two passes, one per template); its PyPI deps (json5/jsonref/jsonschema/mako) come from the **`pip_clustergen`** hub.
+- **peakrdl is deliberately dropped**: the `snitch_cluster_peripheral_reg[_pkg].sv` files ship **pre-generated** in the upstream archive (setup.sh's peakrdl branch is `if [ ! -f ... ]`-guarded and never runs), so they are referenced from `@snitch_cluster_src` — avoiding peakrdl's systemrdl version fragility.
+- `snitch_bootrom.sv` (combinational bootrom) and `tc_sram.sv` (fakeram-backed SRAM override) are committed HighTide files. The `*.svh` include trees (incl. iDMA's nested `src/include` + `target/rtl/include`) are staged via `:rtl_data` + the platform BUILDs' `stage_data`; `VERILOG_INCLUDE_DIRS` points at the `@*_src` include dirs.
+
+**Verification**: clustergen output is **byte-identical** to the previously-committed wrapper/pkg (deterministic); the full hermetic 377-file RTL elaborates + synthesizes clean through yosys-slang (all 4 fakeram macros resolved); and the **asap7 `_final` netlist matches the `results.html` baseline exactly on logic** — seq **147658** and comb **1121472** identical, die/core/util/macros/ios identical — with P&R metrics within tool noise (bufinv −1.6%, WNS +174 ps *better*, Fmax +5%). Removed the submodule, `setup.sh`, `patches/`, and the `dev/generated/deps/` flattened snapshot; kept `dev/cluster_cfg.json` (clustergen input), `dev/generate_sram_mapping.py`, and the `dev/generated/sram/` fakeram macros + cfgs.
+
 ## asap7
 
 **Status**: finishing on bazel-orfs 553c1c3.
