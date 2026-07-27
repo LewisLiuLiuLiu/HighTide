@@ -170,6 +170,16 @@ bazel build "${targets[@]}" --output_groups="$config_groups" >&2
 verilog_files=$(bazel cquery --output=files \
     "labels(verilog_files, //${pkg}:${name}_synth)" 2>/dev/null | tr '\n' ' ')
 
+# Bazel output base: hermetic designs source RTL from http_archives, whose
+# files live at $output_base/external/+_repo_rules+<repo>/... — NOT under the
+# repo root (there is no repo-root external/ symlink). This location is always
+# present once the repo is fetched, unlike execroot/external/, which Bazel only
+# materializes per-action and prunes on cache hits. --abs routes external/
+# tokens here; bazel-out/ genrule outputs resolve via the repo-root bazel-out
+# convenience symlink, and repo-relative source tokens (SDC/LEF/...) via the
+# repo root.
+output_base=$(bazel info output_base 2>/dev/null)
+
 # --- Locate the result dir + collect the per-stage config .mk files -------
 results_root="bazel-bin/${pkg}/results"
 [ -d "$results_root" ] || {
@@ -211,7 +221,7 @@ EOF
         grep -h '^export ' "${mks[@]}"
         [ -n "$verilog_files" ] && printf 'export VERILOG_FILES?=%s\n' "${verilog_files% }"
     } \
-        | awk -v skip="$SKIP_VARS" -v abs="$abs" -v root="$repo_root" '
+        | awk -v skip="$SKIP_VARS" -v abs="$abs" -v root="$repo_root" -v outbase="$output_base" '
             # Vars whose value is one or more file/dir paths.
             function is_pathvar(k) {
                 return (k ~ /^(VERILOG_FILES|SDC_FILE|ADDITIONAL_LEFS|ADDITIONAL_LIBS|ADDITIONAL_GDS|IO_CONSTRAINTS|FOOTPRINT_TCL|MACRO_PLACEMENT_TCL|VERILOG_INCLUDE_DIRS|PDN_TCL)$/) || (k ~ /_TCL$/)
@@ -235,9 +245,17 @@ EOF
                         t = toks[i]
                         if (t == "") continue
                         # Absolutize relative paths; leave abs paths and
-                        # make/flag tokens (-, $) untouched.
-                        if (t !~ /^\// && t !~ /^-/ && t !~ /^\$/)
-                            t = root "/" t
+                        # make/flag tokens (-, $) untouched.  external/ tokens
+                        # (hermetic http_archive RTL + include dirs) live under
+                        # the output base; everything else — repo source and
+                        # bazel-out/ genrule outputs (via the repo-root
+                        # bazel-out symlink) — under the repo root.
+                        if (t !~ /^\// && t !~ /^-/ && t !~ /^\$/) {
+                            if ((t ~ /^external\//) && outbase != "")
+                                t = outbase "/" t
+                            else
+                                t = root "/" t
+                        }
                         out = (out == "" ? t : out " " t)
                     }
                     val = out
