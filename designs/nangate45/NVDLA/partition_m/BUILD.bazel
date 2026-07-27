@@ -11,7 +11,7 @@ hightide_design(
     stage_data = {"synth": ["//designs/src/NVDLA:include"]},
     arguments = {
         "SYNTH_HIERARCHICAL": "1",
-        "VERILOG_INCLUDE_DIRS": "designs/src/NVDLA/vmod/include designs/src/NVDLA/vmod/vlibs",
+        "VERILOG_INCLUDE_DIRS": "bazel-out/k8-fastbuild/bin/designs/src/NVDLA/vmod/include bazel-out/k8-fastbuild/bin/designs/src/NVDLA/vmod/vlibs",
         "CORE_UTILIZATION": "50",
         "PLACE_DENSITY_LB_ADDON": "0.20",
         "TNS_END_PERCENT": "100",
