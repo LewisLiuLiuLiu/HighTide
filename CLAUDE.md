@@ -28,9 +28,6 @@ bazel build //designs/asap7/...
 # Build all designs across all platforms
 bazel build //designs/...
 
-# Build with dev RTL generation (requires submodule init + tools)
-bazel build --define update_rtl=true //designs/asap7/lfsr:lfsr_final
-
 # Build individual stages (target suffixes: _synth, _floorplan, _place, _cts, _grt, _route, _final)
 bazel build //designs/asap7/lfsr:lfsr_synth
 bazel build //designs/asap7/lfsr:lfsr_place
@@ -44,9 +41,9 @@ Note: `hightide_design()` exposes the per-stage `orfs_flow` targets (`_synth` �
 
 - **`MODULE.bazel`** — Mirrors `bazel-orfs`'s root-only overrides (it pins ORFS/OpenROAD via `archive_override` tarballs, builds OpenROAD from source, yosys `0.64`, sv-lang/scip/sed/boost.unordered `single_version_override`s) and adds HighTide's yosys-slang plugin. Keep in sync with `bazel-orfs/MODULE.bazel` at the pinned submodule commit when bumping (see the `upgrade-tools` skill). `.bazelrc` carries `--@openroad//:platform=gui` (needed by the `_gallery` render)
 - **`defs.bzl`** — `hightide_design()` macro wrapping `orfs_flow()` with common defaults (`GDS_ALLOW_EMPTY`, platform-to-PDK mapping)
-- **`BUILD.bazel`** (root) — Defines `//:update_rtl` config setting and the `merge_yosys_share` target that bundles the yosys-slang plugin
+- **`BUILD.bazel`** (root) — Defines the `merge_yosys_share` target that bundles the yosys-slang plugin
 - Each design has a `BUILD.bazel` calling `hightide_design()` with its parameters (utilization, density, SRAMs, etc.)
-- RTL sources at `designs/src/<design>/BUILD.bazel` use `select()` to switch between release and dev RTL
+- RTL sources are fetched hermetically: `designs/src/<design>/BUILD.bazel` aliases `:rtl` to the pinned `@<design>_src` archive (or to a local converter target)
 
 ### Design Configuration
 
@@ -58,14 +55,13 @@ Each design lives at `designs/<platform>/<design>/` and contains:
 
 ### RTL Source Management (`designs/src/`)
 
-Design sources are git submodules under `designs/src/<design>/dev/repo/`.
+Design RTL sources are pinned as hermetic `http_archive`s in the root `MODULE.bazel` (`@<design>_src`) — no git submodules, no vendored RTL.
 
-Each `designs/src/<design>/BUILD.bazel` defines:
-- `rtl_release` filegroup — pre-generated Verilog files
-- `rtl_dev_gen` genrule — runs setup.sh/sv2v to generate from source
-- `rtl` alias — uses `select({"//:update_rtl": ..., "//conditions:default": ...})` to pick
+Each `designs/src/<design>/` has:
+- `external.BUILD.bazel` — injected BUILD for the fetched archive; exposes an `:rtl` filegroup (or the source files a converter consumes)
+- `BUILD.bazel` — a stable `:rtl` alias pointing at `@<design>_src//:rtl`, or at a local converter target (sv2v genrule, Chisel `scala_binary` under `rules_scala`, or a Python `py_binary` generator that emits `:gen_<design>`)
 
-Dev mode requires: `git submodule update --init designs/src/<design>/dev/repo` before `bazel build --define update_rtl=true`.
+Source fixes are declarative `patches = [...]` on the `http_archive`. To move a design to a newer upstream, bump its archive `urls`/`sha256`/`strip_prefix` in `MODULE.bazel`.
 
 ### Platforms
 

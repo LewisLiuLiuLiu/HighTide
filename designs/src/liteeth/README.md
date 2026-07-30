@@ -11,11 +11,12 @@ bazel build //designs/nangate45/liteeth:liteeth_final
 The Verilog top module is `liteeth_udp_usp_gth_sgmii` (LiteX-generated);
 the Bazel target / display name is the shorter `liteeth`.
 
-The release RTL is pre-generated.  To regenerate from the upstream
-liteeth submodule, run with `--define update_rtl=true`:
+The RTL is generated hermetically by Bazel from the pinned LiteX / migen /
+liteeth archives in the root `MODULE.bazel`.  To regenerate against newer
+upstream, bump those archive pins and rebuild:
 
 ```bash
-bazel build --define update_rtl=true //designs/nangate45/liteeth:liteeth_final
+bazel build //designs/nangate45/liteeth:liteeth_final
 ```
 
 This initializes the `designs/src/liteeth/dev/repo` submodule and

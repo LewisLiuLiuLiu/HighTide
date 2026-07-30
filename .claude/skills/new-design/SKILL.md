@@ -18,68 +18,68 @@ You are adding a new design called `$0` from upstream repository `$1` into the H
   - Whether it has substantial embedded memories (register files, FIFOs, caches, etc.)
   - Any build dependencies needed to generate Verilog (sv2v, sbt, Python venv, etc.)
 
-### 2. Add the git submodule
+### 2. Pin the upstream source as a hermetic `http_archive`
 
-```bash
-git submodule add <UPSTREAM_URL> designs/src/$0/dev/repo
-```
-
-### 3. Create `designs/src/$0/dev/setup.sh`
-
-This script must:
-- `cd` to its own directory: `cd "$(dirname $(readlink -f $0))"`
-- Install any required build tools locally if not present (sv2v, JDK, Python venv, etc.)
-- Generate flat Verilog from the upstream source
-- Place the output at a known location (e.g., `dev/generated/$0.v` or `dev/$0.v`)
-
-The setup.sh must install all dependencies needed to convert the source HDL to plain Verilog. Follow existing patterns:
-- **SystemVerilog designs**: Use either sv2v (see `designs/src/minimax/dev/setup.sh`) or yosys-slang. The setup.sh must build/install the chosen tool locally if not present.
-- **Pure Verilog designs**: May just need file copying (see `designs/src/lfsr/dev/setup.sh`)
-- **Chisel/Scala designs**: Install JDK + sbt locally, run sbt to generate Verilog (see `designs/src/gemmini/dev/setup.sh`)
-- **LiteX/Python designs**: Create Python venv, pip install all dependencies, generate Verilog (see `designs/src/liteeth/dev/setup.sh`)
-- **Veriloggen/Python designs**: Create Python venv, pip install dependencies including Veriloggen/NNgen, generate Verilog (see `designs/src/cnn/dev/setup.sh`)
-
-### 4. Create `designs/src/$0/BUILD.bazel`
-
-This file declares RTL filegroups and a `select()` alias that switches
-between release and dev-generated Verilog. Follow this pattern (see
-`designs/src/lfsr/BUILD.bazel` for the simplest reference):
+RTL is fetched by Bazel from a pinned upstream tarball — **no git
+submodule, no vendored copy, no `setup.sh`**. Add an `http_archive` to
+the "HighTide design RTL sources" block in the root `MODULE.bazel`:
 
 ```python
+http_archive(
+    name = "$0_src",
+    build_file = "//designs/src/$0:external.BUILD.bazel",
+    strip_prefix = "<upstream-repo>-<commit-sha>",
+    urls = ["https://github.com/<owner>/<repo>/archive/<commit-sha>.tar.gz"],
+    sha256 = "<run once with a bogus hash; Bazel prints the real one>",
+    # patches = ["//designs/src/$0:0001-fix.patch"],  # declarative source fixes, if needed
+)
+```
+
+Pin a specific commit SHA (not a branch). See `lfsr_src` in
+`MODULE.bazel` for the simplest reference.
+
+### 3. Create `designs/src/$0/external.BUILD.bazel`
+
+This is the BUILD injected into the fetched archive. It exposes the
+upstream sources HighTide consumes — as an `:rtl` filegroup directly
+(pure Verilog) or as the input files a converter lowers to Verilog.
+
+```python
+# Pure-Verilog design — expose the files directly as :rtl
 filegroup(
-    name = "rtl_release",
-    srcs = ["$0.v"],   # or multiple .v files
-)
-
-genrule(
-    name = "rtl_dev_gen",
-    srcs = [],
-    outs = ["dev_$0.v"],
-    local = True,
-    cmd = """
-        WORKSPACE_ROOT=$$(readlink -f $(location //:tools/update_rtl.sh) | sed 's|/tools/update_rtl.sh||')
-        cd $$WORKSPACE_ROOT
-        git submodule update --init designs/src/$0/dev/repo >&2
-        bash designs/src/$0/dev/setup.sh >&2
-        cp designs/src/$0/dev/generated/$0.v $(location dev_$0.v)
-    """,
-    tools = ["//:tools/update_rtl.sh"],
-)
-
-alias(
     name = "rtl",
-    actual = select({
-        "//:update_rtl": ":rtl_dev_gen",
-        "//conditions:default": ":rtl_release",
-    }),
+    srcs = ["rtl/$0.v"],   # paths inside the upstream archive
     visibility = ["//visibility:public"],
 )
 ```
 
-Designs with many generated files typically wrap the genrule output in
-a `filegroup` and glob over `dev/generated/**/*.v` — see
-`designs/src/snitch_cluster/BUILD.bazel` or
-`designs/src/bp_processor/BUILD.bazel` for richer examples.
+If the design needs conversion, expose the raw sources here and do the
+conversion under Bazel (step 4). Follow existing patterns:
+- **Pure Verilog** — expose `:rtl` directly (see `designs/src/lfsr/external.BUILD.bazel`)
+- **SystemVerilog** — expose the `.sv` sources; lower with sv2v under Bazel (see `designs/src/minimax`)
+- **Chisel/Scala** — compile + run the emitter with `scala_binary` under `rules_scala`, Maven-pinned chisel3 (see `designs/src/gemmini/BUILD.bazel`)
+- **LiteX / migen (Python)** — run the generator as a Bazel `py_binary`, no venv / pip-at-build (see `designs/src/litedram`, `designs/src/liteeth`)
+- **Veriloggen / NNgen (Python)** — same, as a `py_binary` generator (see `designs/src/cnn`)
+
+### 4. Create `designs/src/$0/BUILD.bazel`
+
+Carry a stable `:rtl` alias so consumer labels (`//designs/src/$0:rtl`)
+never change, regardless of how the RTL is produced:
+
+```python
+# Pure Verilog: alias straight to the fetched archive
+alias(
+    name = "rtl",
+    actual = "@$0_src//:rtl",
+    visibility = ["//visibility:public"],
+)
+```
+
+When conversion is needed, point the alias at the local generator target
+instead — e.g. a `gen_$0` genrule that runs sv2v or a Chisel/Python
+emitter over `@$0_src`, then `actual = ":gen_$0"`. See
+`designs/src/gemmini/BUILD.bazel` (Chisel) or `designs/src/cnn/BUILD.bazel`
+(Python generator + committed SRAM macros) for richer examples.
 
 ### 5. Identify and create FakeRAM black-box memories
 
@@ -191,25 +191,20 @@ Most designs work fine with platform defaults. These are needed in specific situ
 
 **Congestion troubleshooting priority:** It is preferable to keep cell utilization high. If congestion occurs, try fixing IO placement first (`io.tcl`), then adjusting `MACRO_PLACE_HALO`, then `PLACE_PINS_ARGS = -min_distance <N> -min_distance_in_tracks`. Only lower `CORE_UTILIZATION` as a last resort.
 
-### 8. Generate and check in release RTL
+### 8. Verify the RTL resolves
 
-Run the dev RTL generator, then commit the result to the release location:
+Confirm the `:rtl` target fetches and (if needed) generates cleanly:
 ```bash
-# Generate via dev mode (initializes submodule + runs setup.sh)
-bazel build --define update_rtl=true //designs/src/$0:rtl
-
-# Copy generated RTL out of the bazel-bin tree to the release location
-cp bazel-bin/designs/src/$0/dev_$0.v designs/src/$0/$0.v
+bazel build //designs/src/$0:rtl
 ```
+The Verilog is produced hermetically from the pinned `@$0_src` archive —
+there is nothing to check in beyond the `external.BUILD.bazel` /
+`BUILD.bazel` wiring (and any declarative `patches`).
 
 ### 9. Test the flow
 
 ```bash
-# Build with release RTL (default)
 bazel build //designs/<platform>/$0:$0_final
-
-# Build with dev RTL regenerated from the upstream submodule
-bazel build --define update_rtl=true //designs/<platform>/$0:$0_final
 ```
 
 For incremental work, build a single stage instead of the full flow:
