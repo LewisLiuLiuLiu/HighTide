@@ -9,7 +9,7 @@ HighTide uses [Bazel](https://bazel.build/) with the [bazel-orfs](https://github
 ```
 MODULE.bazel          # Declares bazel-orfs dependency and ORFS Docker image
 defs.bzl              # hightide_design() macro wrapping orfs_flow()
-BUILD.bazel           # Root config (update_rtl flag, nangate45 PDK)
+BUILD.bazel           # Root config (yosys-slang share merge, nangate45 PDK)
 designs/
 ├── src/<design>/     # RTL sources (shared across platforms)
 ├── asap7/<design>/   # Platform-specific config (BUILD.bazel, constraint.sdc)
@@ -40,12 +40,12 @@ The ORFS flow runs in 6 stages, each producing an ODB (OpenROAD Database) file:
 
 ## RTL Source Management
 
-Design RTL sources live at `designs/src/<design>/`. Each design has:
+Design RTL is fetched hermetically by Bazel — no vendored copies, no submodules. Each design's `designs/src/<design>/` has:
 
-- **Release RTL** — pre-generated Verilog checked into the repo
-- **Dev RTL** — a git submodule at `dev/repo/` with a `setup.sh` script that generates Verilog from the upstream source
+- **Pinned upstream** — an `http_archive` (`@<design>_src`) in the root `MODULE.bazel` fetches the upstream source at a fixed commit; source fixes are declarative `patches`
+- **Hermetic conversion** — native HDL (SystemVerilog, Chisel, Python generators) is lowered to Verilog inside the Bazel build
 
-The `select()` mechanism in each design's `BUILD.bazel` switches between release and dev RTL based on the `--define update_rtl=true` flag.
+Each design's `BUILD.bazel` exposes a stable `:rtl` alias pointing at the fetched archive (or at a local converter target). To move to newer upstream, bump the archive pin in `MODULE.bazel`.
 
 ### HDL Conversion Pipeline
 

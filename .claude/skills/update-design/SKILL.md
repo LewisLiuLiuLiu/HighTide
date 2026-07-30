@@ -185,41 +185,32 @@ If the only change is regenerating RTL from upstream with no flow-config impact,
 
 ### A. Update upstream source (new RTL from upstream repo)
 
-1. **Update the submodule to the desired commit:**
-   ```bash
-   cd designs/src/$0/dev/repo
-   git fetch origin
-   git checkout <new-commit-or-tag>
-   cd /home/mrg/HighTide
-   ```
+1. **Re-pin the `http_archive` in `MODULE.bazel`:** point the `@$0_src`
+   archive's `urls` (and `strip_prefix`) at the new commit SHA. Set
+   `sha256` to a bogus value, run the build once, and paste the real
+   hash Bazel prints back into the stanza.
 
-2. **Check if `setup.sh` needs changes:**
-   - Read `designs/src/$0/dev/setup.sh`
-   - If the upstream build process changed (new dependencies, renamed files, different build commands), update `setup.sh` accordingly
+2. **Check declarative patches still apply:** if the `http_archive` has
+   `patches = [...]`, a re-fetch against the new sources may fail to
+   apply them. Refresh or drop patches as needed.
 
-3. **Regenerate RTL:**
+3. **Re-fetch and regenerate RTL:**
    ```bash
-   # Clean cached dev artifacts (force the genrule to re-run)
-   rm -rf designs/src/$0/dev/generated
-   # Regenerate via the Bazel update-rtl define
-   bazel build --define update_rtl=true //designs/src/$0:rtl
+   bazel build //designs/src/$0:rtl
    ```
+   Bazel re-fetches the archive and re-runs any converter (sv2v / Chisel
+   emitter / Python generator). There is no `dev/generated` cache to
+   clean and nothing to check in.
 
 4. **Check for new or changed memories:**
    - Compare the new RTL against the old to identify any new memory modules
    - If new memories are found, create FakeRAM LEF/LIB files following the patterns in `designs/$1/$0/sram/` or other designs like NyuziProcessor/liteeth
    - Update the design's `BUILD.bazel` `sources` dict (`ADDITIONAL_LEFS` / `ADDITIONAL_LIBS` filegroups) if new FakeRAM files were added
 
-5. **Promote release RTL:**
-   ```bash
-   cp bazel-bin/designs/src/$0/dev_$0.v designs/src/$0/$0.v
-   ```
-   (Adjust the source/destination path to match the genrule's outputs and where the design's `rtl_release` filegroup expects the file.)
+5. **Check if the RTL file set changed:**
+   - If the converter now emits different Verilog paths (or the upstream layout moved), update the `:rtl` filegroup in `designs/src/$0/external.BUILD.bazel` and any generator `outs` in `designs/src/$0/BUILD.bazel`.
 
-6. **Check if `BUILD.bazel` filegroups need updates:**
-   - If new Verilog files were added or names changed, update the `rtl_release` filegroup (and the `rtl_dev_gen` `outs` / copy commands) in `designs/src/$0/BUILD.bazel`.
-
-7. **Test the flow:**
+6. **Test the flow:**
    ```bash
    # Build :<design>_gallery (not :<design>_final) so the layout PNG gets
    # rendered and cached too — update-results becomes a pure cache fetch.
@@ -228,7 +219,7 @@ If the only change is regenerating RTL from upstream with no flow-config impact,
    Run one platform at a time on the local machine — these can be big
    designs and parallel platform builds may exhaust memory.
 
-8. **Refresh the webpage (once, before opening the PR):** after every
+7. **Refresh the webpage (once, before opening the PR):** after every
    supported platform for this design has built green (1–3 platforms,
    whichever the design has), run the `/update-results` skill **once**
    so `webpage/results.html`, the Design Portfolio badges in
@@ -237,28 +228,21 @@ If the only change is regenerating RTL from upstream with no flow-config impact,
    the webpage diff as part of the PR for the design bump — not after
    each individual platform build.
 
-### B. Update tool dependencies (JDK, sbt, sv2v, Python packages, etc.)
+### B. Update conversion tools (Chisel/Maven, Python packages, sv2v, etc.)
 
-1. **Read current `setup.sh`:**
-   - `designs/src/$0/dev/setup.sh`
+Conversion tools are pinned in Bazel, not installed by a `setup.sh`, so a
+tool bump is a pin bump in `MODULE.bazel` (or the design's build files):
 
-2. **Update version numbers or URLs** as needed (e.g., JDK version, pip package commits, sbt version)
+1. **Bump the relevant pin:**
+   - **Chisel/Scala** — the Maven coordinates in the `maven_chisel` install
+   - **LiteX / migen / NNgen (Python)** — the `pip_*` hub lock, or the tool's own `http_archive`
+   - **sv2v** — the pinned `sv2v` release archive
 
-3. **Clean old tool artifacts:**
+2. **Regenerate and verify:**
    ```bash
-   # Remove cached tool installations and generated files
-   rm -rf designs/src/$0/dev/generated
-   rm -rf designs/src/$0/dev/.venv      # if Python-based
-   rm -rf designs/src/$0/dev/sbt        # if sbt-based
-   rm -rf designs/src/$0/dev/sv2v       # if sv2v-based
+   bazel build //designs/src/$0:rtl
    ```
-
-4. **Regenerate:**
-   ```bash
-   bazel build --define update_rtl=true //designs/src/$0:rtl
-   ```
-
-5. **Verify RTL matches or update release copy** if the generated Verilog changed.
+   Confirm the generated Verilog still builds through the flow.
 
 ### C. Tune flow parameters (timing, utilization, density)
 

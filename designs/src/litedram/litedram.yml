@@ -10,7 +10,7 @@
 # controller, bank machines, crossbar, refresh/init FSMs and AXI/Wishbone
 # frontends — not a SoC.
 #
-# Regenerate via `bazel build --define update_rtl=true ...`.
+# Regenerate by bumping the pinned litedram/litex/migen archives in MODULE.bazel.
 
 {
     # General ------------------------------------------------------------------

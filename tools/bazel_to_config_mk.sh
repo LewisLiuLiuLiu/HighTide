@@ -32,10 +32,9 @@
 # Caveats:
 # - Without --abs, VERILOG_FILES / SDC_FILE paths are workspace-relative;
 #   run upstream ORFS Make from the HighTide repo root (or use --abs).
-# - For designs that synthesize from dev-generated RTL (genrules), the
-#   resolved paths point into bazel-out/. Use --define update_rtl=true
-#   before extraction if you want fresh generated sources, or rely on
-#   the committed release RTL by extracting without that flag (default).
+# - For designs whose RTL is generated at build time (sv2v, Chisel, or
+#   Python generators), the resolved VERILOG_FILES paths point into
+#   bazel-out/; build the design first so the generated sources exist.
 # - PLATFORM_DIR is intentionally stripped — let ORFS Make derive it
 #   from $(FLOW_HOME)/platforms/$(PLATFORM).
 
