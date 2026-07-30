@@ -6,15 +6,17 @@ A VLSI design benchmark suite that runs open-source hardware designs through the
 
 ## How It Works
 
-Each design's upstream source lives in a git submodule at `designs/src/<design>/dev/repo/`. A build script converts the source HDL (SystemVerilog, Chisel, LiteX, etc.) into plain Verilog, which is checked into the repo as the **release RTL** at `designs/src/<design>/`. The release RTL may include patches or modifications beyond simple conversion — for example, SRAM memories are replaced with FakeRAM black-box macros so the design can be synthesized without an SRAM compiler. This release RTL is what builds use by default — no submodule checkout or conversion tools needed.
+Each design's upstream source is pinned in the root `MODULE.bazel` as a hermetic `http_archive` (`@<design>_src`) at a fixed upstream commit — there is no git submodule and no vendored copy of the RTL in the repo. At build time Bazel fetches that archive and compiles the native HDL (SystemVerilog, Chisel, LiteX/migen, etc.) down to plain Verilog using pinned conversion tools (e.g. [sv2v](https://github.com/zachjs/sv2v), Chisel under `rules_scala`, NNgen), applying any design-specific patches declaratively. The per-design build logic lives in `designs/src/<design>/external.BUILD.bazel`, and the rationale behind each design's tuning is recorded in `designs/src/<design>/DECISIONS.md`. Embedded SRAM memories are replaced with black-box macros so the design can be synthesized without an SRAM compiler.
 
-To regenerate RTL from the upstream source (e.g., after updating the submodule to a newer commit):
+Because sourcing, conversion, and patching all happen inside the Bazel build, a clean checkout builds any design with no submodule initialization and no external conversion tools installed:
 
 ```bash
-bazel build --define update_rtl=true //designs/asap7/lfsr:lfsr_final
+bazel build //designs/asap7/lfsr:lfsr_final
 ```
 
-The release RTL is then run through the [OpenROAD-flow-scripts](https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts) RTL-to-GDSII flow: synthesis (Yosys) → floorplan → placement → clock tree synthesis → routing → GDSII output. Each design has per-platform configuration (clock constraints, utilization targets, pin placement) tuned for the target technology node.
+To move a design to a newer upstream commit, bump its pinned archive (URL + integrity hash) in `MODULE.bazel`; Bazel re-fetches, re-converts, and re-runs only the flow stages whose inputs changed.
+
+The generated Verilog is run through the [OpenROAD-flow-scripts](https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts) RTL-to-GDSII flow: synthesis (Yosys) → floorplan → placement → clock tree synthesis → routing → GDSII output. Each design has per-platform configuration (clock constraints, utilization targets, pin placement) tuned for the target technology node.
 
 ## Running a design in upstream ORFS (for OpenROAD researchers)
 
