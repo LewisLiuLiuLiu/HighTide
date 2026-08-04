@@ -2,8 +2,9 @@ name: Audit Upstream Updates
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 9 * * 1"  # Every Monday at 9 AM
+  # Disabled to save LLM token costs — re-enable by uncommenting:
+  # schedule:
+  #   - cron: "0 9 * * 1"  # Every Monday at 9 AM
 
 permissions:
   contents: read
@@ -41,7 +42,9 @@ jobs:
             2>/dev/null || true
 
       - name: Classify changes and file issues (Claude)
-        if: steps.audit.outputs.items != '0'
+        # Disabled to save LLM token costs — restore the condition below to re-enable:
+        #   if: steps.audit.outputs.items != '0'
+        if: false
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         uses: anthropics/claude-code-action@v1

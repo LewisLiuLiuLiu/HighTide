@@ -2,8 +2,9 @@ name: Find New Designs
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 9 * * 1"  # Every Monday at 9 AM
+  # Disabled to save LLM token costs — re-enable by uncommenting:
+  # schedule:
+  #   - cron: "0 9 * * 1"  # Every Monday at 9 AM
 
 permissions:
   contents: read
@@ -12,9 +13,9 @@ permissions:
 
 jobs:
   find-designs:
-    # Only run on the canonical repo — forks don't have the ANTHROPIC_API_KEY
-    # secret, so this Claude job would just fail on them.
-    if: ${{ github.repository == 'VLSIDA/HighTide' }}
+    # Disabled to save LLM token costs — restore the fork-guard below to re-enable:
+    #   if: ${{ github.repository == 'VLSIDA/HighTide' }}
+    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
